@@ -9,7 +9,7 @@ Literature Search main entry.
 import argparse
 import json
 
-from platform.google_scholar import handle_literature_query
+from search_platform.google_scholar import handle_literature_query
 from server import create_app
 
 

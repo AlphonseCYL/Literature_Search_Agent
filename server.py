@@ -4,7 +4,7 @@ from typing import Any, Dict, List
 from ElasticSearch import search_mysql_literature_with_es
 from db_utils.init_mysql_db import init_mysql_database
 from db_utils.mysql_db_func import save_literature_metadata
-from platform.google_scholar import serpapi_google_scholar
+from search_platform.google_scholar import serpapi_google_scholar
 from utils.handle_query import handle_query
 
 
@@ -115,7 +115,7 @@ def create_app() -> Flask:
         print(f"\n$$$$ SYSTEM CALL $$$$: FROM SEARCH_DB_ES:")
         print(f"$$$$ SYSTEM CALL $$$$: successfully received request with payload:\n")
         print(f"{received_dict}\n")
-        # 提取参数
+        # 提取参数,hiagent端定义的参数
         query = received_dict.get("query")
         limit = received_dict.get("limit", 20)
         source = received_dict.get("source")

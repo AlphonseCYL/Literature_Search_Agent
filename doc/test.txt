@@ -1,0 +1,12 @@
+{
+  "literature_search_results": [
+    {
+      "cite_format_link": "https://serpapi.com/search.json?engine=google_scholar_cite&hl=zh-CN&q=hf0JwpPJTY8J",
+      "link": "https://search.ebscohost.com/login.aspx?direct=true&profile=ehost&scope=site&authtype=crawler&jrnl=16734440&AN=183619052&h=I6CzZNXFDNB0A34Wb%2BR1dtwjmc237xBcCe5ZgMEAd98JOUOvr9J09xlMt3GFA5wr6i%2BZTe5Zv489GVwjDKL%2FxQ%3D%3D&crl=c",
+      "related_pages_link": null,
+      "snippet": "… 无人机多模态智能感知技术,与组合高精度卫星导航,惯性导航,… 因此,本文聚焦 无人机多模态自主 感知与多传感器高精度组合… 检测应用中,一种基于雷达/ 激 光雷达/ 视觉的低空无人机多模态信息…",
+      "summary": "蔡伯根， 李智宇， 王剑， 刘丹， 姜维… - Railway Signalling …, 2025 - search.ebscohost.com",
+      "title": "面向铁路巡检的低空无人机智能感知与精密定位研究."
+    }
+  ]
+}

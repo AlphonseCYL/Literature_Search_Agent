@@ -5,20 +5,56 @@ from typing import Any, Dict, List, Optional, Sequence
 
 import pymysql
 from elasticsearch import Elasticsearch, helpers
+from elasticsearch import AuthenticationException, ConnectionError as ESConnectionError
+
+try:
+    from dotenv import load_dotenv
+except Exception:
+    load_dotenv = None
 
 from db_utils.init_mysql_db import DB_NAME, TABLE_NAME, get_mysql_server_connection
 
+if load_dotenv:
+    load_dotenv()
 
-DEFAULT_ES_INDEX = os.getenv("ES_INDEX_NAME", "literature_metadata_index")
+DEFAULT_ES_INDEX = os.getenv("ES_INDEX_NAME") or os.getenv("DEFAULT_ES_INDEX", "literature_metadata_index")
 DEFAULT_ES_HOSTS: Sequence[str] = tuple(
     host.strip()
     for host in os.getenv("ELASTICSEARCH_HOSTS", "http://127.0.0.1:9200").split(",")
     if host.strip()
 )
+ES_USERNAME = (os.getenv("ES_USERNAME") or "elastic").strip()
+ES_PASSWORD = os.getenv("ES_PASSWORD", "")
 
 
 def _create_es_client() -> Elasticsearch:
-    return Elasticsearch(list(DEFAULT_ES_HOSTS))
+    client_kwargs: Dict[str, Any] = {}
+    if ES_PASSWORD:
+        client_kwargs["basic_auth"] = (ES_USERNAME, ES_PASSWORD)
+    return Elasticsearch(list(DEFAULT_ES_HOSTS), **client_kwargs)
+
+
+def _ensure_es_connection(client: Elasticsearch) -> None:
+    try:
+        if client.ping():
+            return
+        # ping() returns False for several reasons; use info() for better diagnostics.
+        client.info()
+    except AuthenticationException as exc:
+        raise ConnectionError(
+            "cannot authenticate to Elasticsearch. Please check ES_USERNAME/ES_PASSWORD."
+        ) from exc
+    except ESConnectionError as exc:
+        raise ConnectionError(
+            "cannot connect to Elasticsearch host. Please check ELASTICSEARCH_HOSTS and service status."
+        ) from exc
+    except Exception as exc:
+        raise ConnectionError(
+            f"failed to connect Elasticsearch: {exc}"
+        ) from exc
+    raise ConnectionError(
+        "cannot connect to Elasticsearch. Please check ELASTICSEARCH_HOSTS / credentials / service status."
+    )
 
 
 def _ensure_index(client: Elasticsearch, index_name: str) -> None:
@@ -45,13 +81,14 @@ def _ensure_index(client: Elasticsearch, index_name: str) -> None:
         },
     )
 
-
+# 从MySQL数据库中流式读取文献数据，返回一个包含文献信息的字典列表,
+# 供_sync_mysql_to_es()使用来同步到Elasticsearch
 def _stream_mysql_rows(source: Optional[str] = None) -> List[Dict[str, Any]]:
     connection = get_mysql_server_connection()
     try:
         connection.select_db(DB_NAME)
         with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-            base_sql = f"""
+            base_sql_cmd = f"""
             SELECT
                 id,
                 title,
@@ -69,14 +106,15 @@ def _stream_mysql_rows(source: Optional[str] = None) -> List[Dict[str, Any]]:
             """
             params: List[Any] = []
             if source:
-                base_sql += " WHERE source = %s"
+                base_sql_cmd += " WHERE source = %s"
                 params.append(source)
-            cursor.execute(base_sql, params)
+            cursor.execute(base_sql_cmd, params)
             return list(cursor.fetchall())
     finally:
         connection.close()
 
 
+# 将MySQL数据同步到Elasticsearch，并返回同步的记录数
 def _sync_mysql_to_es(
     client: Elasticsearch,
     index_name: str,
@@ -86,10 +124,10 @@ def _sync_mysql_to_es(
     if not rows:
         return 0
 
-    actions = []
+    actions_cmd = []
     for row in rows:
         mysql_id = row.get("id")
-        actions.append(
+        actions_cmd.append(
             {
                 "_op_type": "index",
                 "_index": index_name,
@@ -111,9 +149,9 @@ def _sync_mysql_to_es(
             }
         )
 
-    helpers.bulk(client, actions, chunk_size=500, raise_on_error=True)
+    helpers.bulk(client, actions_cmd, chunk_size=500, raise_on_error=True)
     client.indices.refresh(index=index_name)
-    return len(actions)
+    return len(actions_cmd)
 
 
 def search_mysql_literature_with_es(
@@ -123,6 +161,8 @@ def search_mysql_literature_with_es(
     index_name: str = DEFAULT_ES_INDEX,
     sync_before_search: bool = True,
 ) -> Dict[str, Any]:
+    
+    # 参数校验和清洗
     cleaned_query = str(query or "").strip()
     if not cleaned_query:
         raise ValueError("query must not be empty")
@@ -133,10 +173,7 @@ def search_mysql_literature_with_es(
         raise ValueError("limit must be an integer") from exc
 
     client = _create_es_client()
-    if not client.ping():
-        raise ConnectionError(
-            "cannot connect to Elasticsearch. please check ELASTICSEARCH_HOSTS and service status."
-        )
+    _ensure_es_connection(client)
 
     _ensure_index(client, index_name=index_name)
 

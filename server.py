@@ -117,7 +117,7 @@ def create_app() -> Flask:
         print(f"{received_dict}\n")
         # 提取参数,hiagent端定义的参数
         query = received_dict.get("query")
-        limit = received_dict.get("limit", 20)
+        limit = received_dict.get("limit", 3)# 默认为3条结果,hiagent端会传入需要的结果数量
         source = received_dict.get("source")
         sync_before_search = received_dict.get("sync_before_search", True)
 

@@ -4,6 +4,13 @@ from typing import Any, Dict
 
 import pymysql
 
+try:
+    from dotenv import load_dotenv
+except Exception:
+    load_dotenv = None
+
+if load_dotenv:
+    load_dotenv()
 
 DB_NAME = os.getenv("MYSQL_DATABASE_NAME", "literature_db")
 TABLE_NAME = os.getenv("MYSQL_TABLE_NAME", "literature_metadata")

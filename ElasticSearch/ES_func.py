@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from typing import Any, Dict, List, Optional, Sequence
 
+from utils import handle_query
 import pymysql
 from elasticsearch import Elasticsearch, helpers
 from elasticsearch import AuthenticationException, ConnectionError as ESConnectionError
@@ -27,6 +28,7 @@ ES_USERNAME = (os.getenv("ES_USERNAME") or "elastic").strip()
 ES_PASSWORD = os.getenv("ES_PASSWORD", "")
 
 
+# 创建ES客户端，若有多个host则创建多个节点集群
 def _create_es_client() -> Elasticsearch:
     client_kwargs: Dict[str, Any] = {}
     if ES_PASSWORD:
@@ -34,11 +36,13 @@ def _create_es_client() -> Elasticsearch:
     return Elasticsearch(list(DEFAULT_ES_HOSTS), **client_kwargs)
 
 
+# 确保es连接成功
 def _ensure_es_connection(client: Elasticsearch) -> None:
     try:
         if client.ping():
             return
         # ping() returns False for several reasons; use info() for better diagnostics.
+        print("$$$$ SYSTEM CALL $$$$: successfully connect ES:")
         client.info()
     except AuthenticationException as exc:
         raise ConnectionError(
@@ -129,7 +133,7 @@ def _sync_mysql_to_es(
         mysql_id = row.get("id")
         actions_cmd.append(
             {
-                "_op_type": "index",
+                "_op_type": "index", # index操作：如果文档ID已存在则更新，不存在则创建
                 "_index": index_name,
                 "_id": str(mysql_id),
                 "_source": {
@@ -156,14 +160,14 @@ def _sync_mysql_to_es(
 
 def search_mysql_literature_with_es(
     query: str,
-    limit: int = 20,
+    limit: int = 3,
     source: Optional[str] = None,
     index_name: str = DEFAULT_ES_INDEX,
     sync_before_search: bool = True,
 ) -> Dict[str, Any]:
     
     # 参数校验和清洗
-    cleaned_query = str(query or "").strip()
+    cleaned_query = handle_query(str(query or ""))
     if not cleaned_query:
         raise ValueError("query must not be empty")
 
@@ -172,11 +176,13 @@ def search_mysql_literature_with_es(
     except (TypeError, ValueError) as exc:
         raise ValueError("limit must be an integer") from exc
 
+    # 创建一个ES客户端
     client = _create_es_client()
     _ensure_es_connection(client)
 
     _ensure_index(client, index_name=index_name)
 
+    # 全量同步MySQL数据到Elasticsearch（可选，默认为True）
     synced_count = 0
     if sync_before_search:
         synced_count = _sync_mysql_to_es(client, index_name=index_name, source=source)
@@ -194,9 +200,9 @@ def search_mysql_literature_with_es(
                             "query": cleaned_query,
                             "fields": [
                                 "title^5",
-                                "author^3",
+                                "author^2",
                                 "platform^2",
-                                "snippet^2",
+                                "snippet^4",
                                 "raw_payload",
                             ],
                             "type": "best_fields",

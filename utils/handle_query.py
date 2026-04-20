@@ -1,10 +1,8 @@
 
-from typing import Any, Dict
-
+from .json_Unicode_2dict import normalize_json_to_dict
 
 def handle_query(
         scholar_query: str,  
-        num: int = 5
         ) -> str:
 
     cleaned_query = scholar_query.strip('"')
@@ -12,3 +10,4 @@ def handle_query(
         cleaned_query = "default search" # 或者抛出异常
         
     return cleaned_query
+

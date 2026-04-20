@@ -2,17 +2,18 @@
 from typing import Any, Dict, List
 
 from ElasticSearch import search_mysql_literature_with_es
-from db_utils.init_mysql_db import init_mysql_database
-from db_utils.mysql_db_func import save_literature_metadata
+from db_utils import init_mysql_database, save_literature_metadata
+from Redis import init_redis_info
 from search_platform.google_scholar import serpapi_google_scholar
-from utils.handle_query import handle_query
+from utils import handle_query, normalize_json_to_dict
 
 
 def create_app() -> Flask:
     app = Flask(__name__)
 
-    # initialize mysql database and table
+    # 初始化MySQL数据库和输出Redis信息
     init_mysql_database()
+    init_redis_info()
 
     # 涓婚〉route
     @app.route("/")
@@ -117,7 +118,7 @@ def create_app() -> Flask:
         print(f"{received_dict}\n")
         # 提取参数,hiagent端定义的参数
         query = received_dict.get("query")
-        limit = received_dict.get("limit", 3)# 默认为3条结果,hiagent端会传入需要的结果数量
+        limit = received_dict.get("limit", 1)# 默认为1条结果,hiagent端会传入需要的结果数量
         source = received_dict.get("source")
         sync_before_search = received_dict.get("sync_before_search", True)
 
@@ -136,7 +137,8 @@ def create_app() -> Flask:
                 source=source,
                 sync_before_search=bool(sync_before_search),
             )
-            return jsonify({"success": True, **result}), 200
+            result_dict = normalize_json_to_dict(result)
+            return jsonify({"success": True, **result_dict}), 200
         except ValueError as exc:
             return jsonify({"success": False, "message": str(exc)}), 400
         except ConnectionError as exc:

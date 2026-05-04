@@ -1,12 +1,14 @@
 ﻿from flask import Flask, jsonify, request
 from typing import Any, Dict, List
 
-from ElasticSearch import search_mysql_literature_with_es
-from db_utils import init_mysql_database, save_literature_metadata
-from Redis import init_redis_info
+from ElasticSearch import ESConnection, DEFAULT_ES_HOSTS, DEFAULT_ES_INDEX
+from db_utils import init_mysql_database, save_literature_metadata, DB_NAME, TABLE_NAME
 from search_platform.google_scholar import serpapi_google_scholar
-from utils import handle_query, normalize_json_to_dict
+from utils import handle_query
+from Redis_utils import init_redis_info, save_literature_to_redis, get_literature_metadata_from_redis, REDIS_LIST
 
+from schemas.redis_template import Save_To_Redis_Info
+from schemas.db_template import Save_Mysql_Info, Literature_Metadata_Record
 
 def create_app() -> Flask:
     app = Flask(__name__)
@@ -15,7 +17,7 @@ def create_app() -> Flask:
     init_mysql_database()
     init_redis_info()
 
-    # 涓婚〉route
+    # route
     @app.route("/")
     def navigator() -> Dict[str, str]:
         return {
@@ -24,7 +26,10 @@ def create_app() -> Flask:
             "data": "literature_searched",
         }
 
-    ####################### Google Scholar 搜索route ########################
+    ############################### Google Scholar 搜索route #################################
+    #    前端输入：{"query_google_scholar": "xxx", "lang_num": {"zh-CN": 5, "en": 5}}
+    #    后端输出：{"literature_search_results": [Literature_Metadata_Record,...]}
+    #
     @app.route("/search_google_scholar/", methods=["POST"])
     def google_scholar_search():
         received_dict = request.get_json(silent=True) or {}
@@ -60,7 +65,8 @@ def create_app() -> Flask:
         for lang, query in query_google_scholar.items():
             cleaned_query[lang] = handle_query(str(query or ""))
 
-        literal_list: List[Dict[str, Any]] = []
+        literal_list: List[Literature_Metadata_Record] = []
+        # 根据不同语言的查询分别调用Google Scholar搜索，并将结果合并到一个列表中
         for lang, query in cleaned_query.items():
             literal_result = serpapi_google_scholar(
                 query=query,
@@ -71,32 +77,22 @@ def create_app() -> Flask:
 
         result_json = {"literature_search_results": []}
         for item in literal_list:
-            publication_info = item.get("publication_info") or {}
-            inline_links = item.get("inline_links") or {}
-            result_json["literature_search_results"].append(
-                {
-                    "title": item.get("title", ""),
-                    "summary": publication_info.get("summary", "Unknown"),
-                    "link": item.get("link", "閾炬帴鏆傜己"),
-                    "snippet": item.get("snippet", ""),
-                    "cite_format_link": inline_links.get("serpapi_cite_link"),
-                    "cited_by": inline_links.get("cited_by"),
-                    "related_pages_link": item.get("serpapi_related_pages_link"),
-                }
-            )
+            result_json["literature_search_results"].append(item.model_dump())
 
         return jsonify(result_json)
 
-    ############################## 存储到MySQL数据库route ################################
+    ############################## 存储到MySQL数据库 ################################
+    #    前端输入：List[dict]，每个dict符合Literature_Metadata_Record的字段要求
+    #    后端输出：dict格式的Save_Mysql_Info的model_dump结果，包含存储结果信息
     @app.route("/save_literature_metadata/", methods=["POST"])
     def save_literature_metadata_route():
-        received_dict = request.get_json(silent=True) or {}
-        print(f"\n$$$$ SYSTEM CALL $$$$: FROM SAVE_LITERATURE_METADATA:")
-        print(f"$$$$ SYSTEM CALL $$$$: successfully received request with payload:\n")
-        print(f"{received_dict}\n")
+        received_list = request.get_json(silent=True) or []
+        print(f"\n$$$$ SYSTEM CALL $$$$: FROM save_to_mysql:")
+        print(f"$$$$ SYSTEM CALL $$$$: successfully received {len(received_list)} literature metadata to save")
+        print("正在存入MySQL数据库......")
 
         try:
-            save_result = save_literature_metadata(received_dict)
+            save_result = save_literature_metadata(received_list)
             print(f"save_result: \n{save_result}")
             return jsonify({"success": True, **save_result.model_dump()}), 200
         except ValueError as exc:
@@ -109,18 +105,47 @@ def create_app() -> Flask:
                 }
             ), 500
 
-    ############################## MySQL + Elasticsearch检索本地数据库route ################################
-    @app.route("/search_db_es/", methods=["POST"])
-    def search_db_es_route():
+    ################################ 数据存入redis ###################################
+    #   功能：将前端搜索文献得到的文献信息存入Redis列表中，存入时会去重，避免重复数据存入Redis
+    #   前端输入：[Literature_Metadata_Record,...]
+    #   后端返回：存储结果给前端
+    @app.route("/save_to_redis/", methods=["POST"])
+    def save_to_redis_route():
+        # 获取前端的返回数据，默认为空列表，以避免get_json返回None时导致后续代码出错
+        received_list = request.get_json(silent=True) or []
+        print(f"\n$$$$ SYSTEM CALL $$$$: FROM SAVE_TO_REDIS:")
+        print(f"$$$$ SYSTEM CALL $$$$: successfully received request with payload:\n")
+        print(f"{len(received_list)} items received\n")
+        print("Redis正在存入数据......")
+
+        # 将每条文献信息存入Redis列表中，返回dict给前端展示存储结果
+        save_result: dict[str, Any] = save_literature_to_redis(REDIS_LIST, received_list)
+        return jsonify(save_result), 200
+    
+    ############################## 从redis读取 ################################
+    #   前端输入：无
+    #   后端返回：{"literature_search_results": List[dict]}JSON格式
+    @app.route("/get_from_redis/", methods=["GET"])
+    def get_from_redis_route():
+        # 从Redis列表中获取所有文献信息
+        literature_list = get_literature_metadata_from_redis(REDIS_LIST)
+        print(f"\n$$$$ SYSTEM CALL $$$$: FROM get_from_redis:")
+        print(f"$$$$ SYSTEM CALL $$$$: successfully retrieved literature metadata from Redis, count: {len(literature_list)}\n")
+        return jsonify({"literature_search_results": literature_list}), 200
+
+
+
+    ############################## Elasticsearch检索MySQL数据库 ################################
+    @app.route("/es_search/", methods=["POST"])
+    def es_search_route():
         received_dict = request.get_json(silent=True) or {}
-        print(f"\n$$$$ SYSTEM CALL $$$$: FROM SEARCH_DB_ES:")
+        print(f"\n$$$$ SYSTEM CALL $$$$: FROM es_search:")
         print(f"$$$$ SYSTEM CALL $$$$: successfully received request with payload:\n")
         print(f"{received_dict}\n")
+
         # 提取参数,hiagent端定义的参数
         query = received_dict.get("query")
-        limit = received_dict.get("limit", 1)# 默认为1条结果,hiagent端会传入需要的结果数量
-        source = received_dict.get("source")
-        sync_before_search = received_dict.get("sync_before_search", True)
+        literature_num = received_dict.get("literature_num", 1)# 默认为1条结果,hiagent端会传入需要的结果数量
 
         if not isinstance(query, str) or not query.strip():
             return jsonify(
@@ -131,14 +156,28 @@ def create_app() -> Flask:
             ), 400
 
         try:
-            result = search_mysql_literature_with_es(
+            es_conn = ESConnection()
+            es_conn.init_index(DEFAULT_ES_INDEX)
+            # 调用Elasticsearch搜索函数，作为检索用户记忆
+            print(f"\n$$$$ SYSTEM CALL $$$$: FROM es_search:")
+            print(f"$$$$ SYSTEM CALL $$$$：执行混合检索......\n")
+            result = es_conn.hybrid_search(
                 query=query,
-                limit=limit,
-                source=source,
-                sync_before_search=bool(sync_before_search),
+                index_name=DEFAULT_ES_INDEX,
+                top_k=literature_num,
             )
-            result_dict = normalize_json_to_dict(result)
-            return jsonify({"success": True, **result_dict}), 200
+            # 将搜索结果pydantic结构数据转化为dict格式
+            serialized_results = [item.model_dump() for item in result]
+            print(f"$$$$ SYSTEM CALL $$$$：混合检索结果已序列化，共 {len(serialized_results)} 条\n")
+
+            return jsonify(
+                {
+                    "success": True,
+                    "returned_count": len(serialized_results),
+                    "literature_metadata": serialized_results
+                }
+            ), 200
+            
         except ValueError as exc:
             return jsonify({"success": False, "message": str(exc)}), 400
         except ConnectionError as exc:

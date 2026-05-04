@@ -20,6 +20,7 @@ MYSQL_SERVER_CONFIG: Dict[str, Any] = {
     "port": int(os.getenv("MYSQL_PORT", "3306")),
     "user": os.getenv("MYSQL_USER", "root"),
     "password": os.getenv("MYSQL_PASSWORD", "0000"),
+    "database": DB_NAME,
     "charset": "utf8mb4",
     "autocommit": True,
 }
@@ -52,7 +53,6 @@ def init_mysql_database() -> None:
         snippet TEXT,
         cited_by INT DEFAULT NULL,
         source VARCHAR(128) NOT NULL DEFAULT 'hiagent',
-        raw_payload LONGTEXT,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         PRIMARY KEY (id),

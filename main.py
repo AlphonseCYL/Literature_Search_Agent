@@ -9,7 +9,6 @@ Literature Search main entry.
 import argparse
 import json
 
-from search_platform.google_scholar import handle_literature_query
 from server import create_app
 
 
@@ -25,15 +24,6 @@ def main() -> None:
     parser.add_argument("--model", type=str, default="qwen-plus", help="LLM model name")
 
     args = parser.parse_args()
-
-    if args.query:
-        result = handle_literature_query(
-            args.query,
-            model=args.model,
-            num=args.num,
-        )
-        print(json.dumps(result, ensure_ascii=False, indent=2))
-        return
 
     app = create_app()
     print(f"Service starting at: {args.host}:{args.port}")

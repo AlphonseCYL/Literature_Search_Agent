@@ -1,8 +1,10 @@
 ﻿import json
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 import serpapi
 import requests
+from schemas.db_template import Literature_Metadata_Record
+import re
 
 try:
     from dotenv import load_dotenv
@@ -19,56 +21,64 @@ DASHSCOPE_URL = os.getenv(
 DASHSCOPE_API_KEY = os.getenv("DASHSCOPE_API_KEY")
 SERPAPI_API_KEY = os.getenv("SERPAPI_API_KEY")
 
+####################### 处理查询结果
+def _extract_cited_by_total(value: Any) -> Optional[int]:
+    try:
+        return Literature_Metadata_Record.model_validate({"cited_by": value}).cited_by
+    except Exception:
+        return None
+############################### 从summary字段安全解析出author, platform, year ########################
+def safe_parse_summary(summary: Any) -> tuple[str, str, str]:
+    if not isinstance(summary, str) or not summary.strip():
+        return "Unknown Author", "Unknown Platform", "Unknown Year"
+
+    text = summary.strip()
+    parts = [part.strip() for part in text.split(" - ", 2)]
+
+    if len(parts) >= 2:
+        author = parts[0] or "Unknown Author"
+        platform_year = parts[1]
+    else:
+        author = text or "Unknown Author"
+        platform_year = ""
+
+    year_match = re.search(r"\b(19|20)\d{2}\b", platform_year)
+    year = year_match.group(0) if year_match else "Unknown Year"
+
+    if "," in platform_year:
+        platform = platform_year.rsplit(",", 1)[0].strip()
+    else:
+        platform = platform_year.strip()
+
+    if not platform:
+        platform = "Unknown Platform"
+
+    return author, platform, year
 
 
+############################# 标准化元数据记录格式 ########################
+def _normalize_metadata_record(record: Dict[str, Any]) -> Literature_Metadata_Record:
 
-def search_google_scholar(
-        query: str, 
-        num: int = 10,
-        lang: str = "zh-CN"
-        ) -> List[Dict[str, Any]]:
-    """Search Google Scholar via SerpAPI and return simplified results."""
-    if not SERPAPI_API_KEY:
-        raise RuntimeError("缺失 SERPAPI_API_KEY")
+    author, platform, year = safe_parse_summary(record.get("publication_info", {}).get("summary", ""))
 
-    params = {
-        "engine": "google_scholar",
-        "q": query,
-        "api_key": SERPAPI_API_KEY,
-        "num": max(1, min(int(num), 20)),# 1-20篇范围内
-        "hl": lang,
-    }
+    return Literature_Metadata_Record(
+        title=record.get("title", ""),
+        author=author,
+        platform=platform,
+        year=year,
+        link=record.get("link", ""),
+        snippet=record.get("snippet", ""),
+        cited_by=_extract_cited_by_total(record.get("cited_by")),
+        source=record.get("source", "hiagent"),
+        raw_payload=json.dumps(record, ensure_ascii=False),
+    )
 
-    response = requests.get("https://serpapi.com/search.json", params=params, timeout=30)
-    # 打印网址
-    print("$"*20 + "\n" + response.url)
-    f = open("show.txt", "w", encoding="utf-8")
-    f.write(response.url)
-    f.close()
-
-    response.raise_for_status()
-
-    data = response.json()
-    results: List[Dict[str, Any]] = []
-    for item in data.get("organic_results", []):
-        results.append(
-            {
-                "title": item.get("title"),
-                "link": item.get("link"),
-                "snippet": item.get("snippet"),
-                "publication_info": item.get("publication_info"),
-                "cited_by": item.get("inline_links", {}).get("cited_by", {}).get("total"),
-            }
-        )
-    return results
-
-
-
+################################ 调用serpapi搜索Google Scholar ################################
 def serpapi_google_scholar(
         query: str, 
         num: int = 10,
         lang: str = "zh-CN"
-        ) -> List[Dict[str, Any]]:
+        ) -> List[Literature_Metadata_Record]:
     """Search Google Scholar via SerpAPI and return simplified results."""
     if not SERPAPI_API_KEY:
         raise RuntimeError("缺失 SERPAPI_API_KEY")
@@ -85,29 +95,14 @@ def serpapi_google_scholar(
     client = serpapi.Client(api_key=SERPAPI_API_KEY)
     results = client.search(params)
     organic_results = results["organic_results"]
-    print("$"*20+"调用的是serpapi_google_scholar函数")
+    print("$"*10+"成功从Google Scholar获取organic_results:"+"$"*10)
+    print("$"*10+"开始修改文献元数据结构......")
+    normalized_list: List[Literature_Metadata_Record] = []
+    for item in organic_results:
+        normalized_list.append(_normalize_metadata_record(item))
 
-    return organic_results
+    return normalized_list
 
-############################
-def handle_literature_query(
-        scholar_query: str, 
-        model: str = "qwen-plus", 
-        num: int = 5
-        )-> Dict[str, Any]:
-    
-    """Minimal end-to-end flow: query -> qwen-plus rewrite -> Google Scholar search."""
-
-    cleaned_query = scholar_query.strip('"')
-    results = search_google_scholar(query=cleaned_query, num=num)
-    if not cleaned_query.strip():
-        cleaned_query = "default search" # 或者抛出异常
-        
-    return {
-        "scholar_query": scholar_query,
-        "cleaned_query": cleaned_query,
-        "results": results,
-    }
 ################################
 
 if __name__ == "__main__":

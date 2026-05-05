@@ -11,7 +11,6 @@ from elasticsearch.helpers import scan
 from schemas.db_template import Literature_Metadata_DB, Literature_Metadata_Record
 from utils import handle_query, singleton
 from db_utils.init_mysql_db import DB_NAME, TABLE_NAME, get_mysql_server_connection
-from ElasticSearch.embedding_service import EMBEDDING_DIMS, embed_literature_fields, embed_text
 
 try:
     from dotenv import load_dotenv
@@ -22,7 +21,7 @@ except Exception:
 if load_dotenv:
     load_dotenv()
 
-DEFAULT_ES_INDEX = os.getenv("ES_INDEX_NAME") or os.getenv("DEFAULT_ES_INDEX", "literature_metadata_index")
+DEFAULT_ES_INDEX = os.getenv("ES_INDEX_NAME") or os.getenv("DEFAULT_ES_INDEX", "literature_metadata")
 DEFAULT_ES_HOSTS: Sequence[str] = tuple(
     host.strip()
     for host in os.getenv("ELASTICSEARCH_HOSTS", "http://127.0.0.1:9200").split(",")
@@ -30,6 +29,7 @@ DEFAULT_ES_HOSTS: Sequence[str] = tuple(
 )
 ES_USERNAME = (os.getenv("ES_USERNAME") or "elastic").strip()
 ES_PASSWORD = os.getenv("ES_PASSWORD", "0000")
+EMBEDDING_DIMS = 768
 
 LITERATURE_METADATA_FIELDS: tuple[str, ...] = (
     "id",
@@ -60,9 +60,12 @@ VECTOR_FIELD_PREFERENCES: tuple[str, ...] = (
 class ESConnection:
     # 构造器，建立与Elasticsearch服务器的连接，并检查连接是否成功
     def __init__(self):
+
+        # 构建Elasticsearch客户端连接参数
         client_kwargs: dict[str, Any] = {"request_timeout": 60}
         if ES_PASSWORD:
             client_kwargs["basic_auth"] = (ES_USERNAME, ES_PASSWORD)
+        
         self.es = Elasticsearch(hosts=list(DEFAULT_ES_HOSTS), **client_kwargs)
         print(f"\n$$$$ SYSTEM CALL $$$$: FROM ESConnection __init__:")
         print(f"$$$$ SYSTEM CALL $$$$: Connected to Elasticsearch at {DEFAULT_ES_HOSTS} with username '{ES_USERNAME}'")
@@ -72,18 +75,18 @@ class ESConnection:
         if not self.es.indices.exists(index=index_name):
             mapping = {
                 "properties": {
-                    "title": {"type": "text"},
+                    "title": {"type": "keyword"},
                     "title_embedding": {
                         "type": "dense_vector",
                         "dims": EMBEDDING_DIMS,
                         "index": True,
                         "similarity": "cosine",
                     },
-                    "author": {"type": "text"},
-                    "platform": {"type": "text"},
+                    "author": {"type": "keyword"},
+                    "platform": {"type": "keyword"},
                     "year": {"type": "keyword"},
                     "link": {"type": "keyword"},
-                    "snippet": {"type": "text"},
+                    "snippet": {"type": "keyword"},
                     "snippet_embedding": {
                         "type": "dense_vector",
                         "dims": EMBEDDING_DIMS,
@@ -100,33 +103,9 @@ class ESConnection:
             print(f"\n$$$$ SYSTEM CALL $$$$: FROM ESConnection init_index:")
             print(f"$$$$ SYSTEM CALL $$$$: Created Elasticsearch index '{index_name}' with mappings: {mapping}")
         else:
-            print(f"$$$$ SYSTEM CALL $$$$: FROM ESConnection init_index:")
-            print(f"$$$$ SYSTEM CALL $$$$: Elasticsearch index '{index_name}' already exists")
-
             existing_properties = self.es.indices.get_mapping(index=index_name)[index_name]["mappings"].get("properties", {})
-            new_properties: dict[str, Any] = {}
-            for field_name in ("title_embedding", "snippet_embedding"):
-                field_mapping = existing_properties.get(field_name)
-                if field_mapping is None:
-                    new_properties[field_name] = {
-                        "type": "dense_vector",
-                        "dims": EMBEDDING_DIMS,
-                        "index": True,
-                        "similarity": "cosine",
-                    }
-                elif field_mapping.get("type") != "dense_vector":
-                    raise ValueError(
-                        f"Field '{field_name}' already exists as type "
-                        f"'{field_mapping.get('type')}', cannot change it to dense_vector in-place. "
-                        "Create a new index with the correct mapping and reindex the data."
-                    )
-
-            if new_properties:
-                self.es.indices.put_mapping(
-                    index=index_name,
-                    properties=new_properties,
-                )
-                print(f"$$$$ SYSTEM CALL $$$$: Added vector fields to '{index_name}': {list(new_properties)}")
+            print(f"$$$$ SYSTEM CALL $$$$: FROM ESConnection init_index:")
+            print(f"$$$$ SYSTEM CALL $$$$: Elasticsearch index '{index_name}' already exists, existing mappings: {existing_properties}")
         
     
     # 插入文档到Elasticsearch，要求每个文档必须包含'id'字段作为唯一标识符
@@ -139,7 +118,7 @@ class ESConnection:
 
             doc_copy = copy.deepcopy(doc)
             meta_id = doc_copy.pop("id")
-            doc_copy.update(embed_literature_fields(doc_copy.get("title"), doc_copy.get("snippet")))
+            # doc_copy.update(embed_literature_fields(doc_copy.get("title"), doc_copy.get("snippet")))
             operations.append({"index": {"_index": index_name, "_id": meta_id}})
             operations.append(doc_copy)
 
@@ -213,6 +192,39 @@ class ESConnection:
                 "message": f"Error deleting documents: {str(e)}"
             }
 
+    # 搜索函数，支持基于任意Elasticsearch查询DSL的搜索，并返回搜索结果和相关信息
+    # size参数用于控制返回结果的数量，默认为3条
+    def ES_query_search(self, index_name: str, search_query: str, size: int = 3) -> List[Literature_Metadata_Record]:
+        try:
+            # 构建Elasticsearch查询DSL，使用multi_match查询在指定的文本字段中搜索用户输入的查询字符串，并根据相关性得分返回最相关的结果
+            query = {"query": {"multi_match": {"query": search_query, "fields": ["title", "snippet", "author", "platform"]}}}
+            print(f"\nFROM ESConnection.ES_query_search:")
+            print(f"Executing Elasticsearch query search with query: \n{query}\n and size: \n{size}\n")
+
+            response = self.es.search(index=index_name, body=query, size=size, timeout="60s")
+            print(f"Received Elasticsearch query search response:\n {response}\n")
+
+            hits = response.get("hits", {}).get("hits", [])
+            ret = []
+            for hit in hits:
+                source_data = hit.get("_source", {}) or {}
+                ret.append(
+                    Literature_Metadata_Record(
+                        title=source_data.get("title", ""),
+                        author=source_data.get("author", ""),
+                        platform=source_data.get("platform", ""),
+                        year=source_data.get("year", ""),
+                        link=source_data.get("link", ""),
+                        snippet=source_data.get("snippet", ""),
+                        cited_by=source_data.get("cited_by"),
+                        source=source_data.get("source", ""),
+                    )
+                )
+            return ret
+        except Exception as e:
+            print(f"Error from ESConnection.ES_query_search: {e}")
+            return []
+
     # 同步MySQL数据库中的文献元数据到Elasticsearch索引中，供搜索使用
     def sync_literature_metadata_from_mysql(
             self,
@@ -230,8 +242,8 @@ class ESConnection:
             with mysql_conn.cursor() as cursor:
                 cursor.execute(cmd)
                 records = cursor.fetchall()
-                print(f"\n$$$$ SYSTEM CALL $$$$: FROM ESConnection sync_literature_metadata_from_mysql:")
-                print(f"$$$$ SYSTEM CALL $$$$: 正在从MySQL数据库'{db_name}'的表'{table_name}'中获取所有待同步数据，请稍候......")
+                print(f"\nFROM ESConnection sync_literature_metadata_from_mysql:")
+                print(f"正在从MySQL数据库'{db_name}'的表'{table_name}'中获取所有待同步数据，请稍候......")
                 print(f"Successfully fetched {len(records)} records from MySQL database '{db_name}', table '{table_name}'")
                 print(f"record 第一个记录为：\n{records[0]}")
         except Exception as exc:
@@ -281,12 +293,10 @@ class ESConnection:
                 document["year"] = str(document["year"])
             if "cited_by" in document and document["cited_by"] is not None:
                 document["cited_by"] = int(document["cited_by"])
-            document.update(embed_literature_fields(document.get("title"), document.get("snippet")))
-
             ES_operations.append({"index": {"_index": index_name, "_id": doc_id}})
             ES_operations.append(document)
-        print(f"\n$$$$ SYSTEM CALL $$$$: FROM ESConnection sync_literature_metadata_from_mysql:")
-        print(f"$$$$ SYSTEM CALL $$$$: 成功构建批量插入操作列表")
+        print(f"\nFROM ESConnection sync_literature_metadata_from_mysql:")
+        print(f"成功构建批量插入操作列表")
         print(f"操作列表前两条为：\n{ES_operations[:4]}\n")# 每条记录对应两条操作命令（index和文档数据），因此显示前4条操作命令
 
         # 执行批量插入操作，并统计成功和失败的记录数量，以及失败的错误信息
@@ -329,82 +339,6 @@ class ESConnection:
             ),
         }
 
-    def backfill_missing_embeddings(
-        self,
-        index_name: str = DEFAULT_ES_INDEX,
-        batch_size: int = 100,
-    ) -> dict[str, Any]:
-        self.init_index(index_name)
-
-        query = {
-            "query": {
-                "bool": {
-                    "should": [
-                        {"bool": {"must_not": {"exists": {"field": "title_embedding"}}}},
-                        {"bool": {"must_not": {"exists": {"field": "snippet_embedding"}}}},
-                    ],
-                    "minimum_should_match": 1,
-                }
-            },
-            "_source": ["title", "snippet"],
-        }
-
-        operations: list[dict[str, Any]] = []
-        updated_count = 0
-        errors: list[str] = []
-        safe_batch_size = max(1, int(batch_size))
-
-        def flush_batch() -> None:
-            nonlocal operations, updated_count
-            if not operations:
-                return
-
-            bulk_result = self.es.bulk(
-                operations=operations,
-                timeout="300s",
-                refresh=True,
-            )
-            for item in bulk_result.get("items", []):
-                update_result = item.get("update", {})
-                status = int(update_result.get("status", 0))
-                if 200 <= status < 300:
-                    updated_count += 1
-                else:
-                    errors.append(f"{update_result.get('_id')}: {update_result.get('error', update_result)}")
-            operations = []
-
-        try:
-            for hit in scan(
-                self.es,
-                index=index_name,
-                query=query,
-                size=safe_batch_size,
-                scroll="5m",
-            ):
-                source_data = hit.get("_source", {}) or {}
-                operations.append({"update": {"_index": index_name, "_id": hit["_id"]}})
-                operations.append(
-                    {
-                        "doc": embed_literature_fields(
-                            source_data.get("title"),
-                            source_data.get("snippet"),
-                        )
-                    }
-                )
-
-                if len(operations) >= safe_batch_size * 2:
-                    flush_batch()
-
-            flush_batch()
-        except Exception as exc:
-            errors.append(str(exc))
-
-        return {
-            "success": len(errors) == 0,
-            "updated_count": updated_count,
-            "failed_count": len(errors),
-            "errors": errors,
-        }
     
     # Elasticsearch搜索函数，支持基于文本查询和向量查询的混合搜索
     def hybrid_search(
@@ -421,7 +355,6 @@ class ESConnection:
         safe_top_k = max(1, min(int(top_k), 100))
         candidate_size = max(safe_top_k * 2, safe_top_k)
 
-        query_vector = embed_text(query)
 
         search_query = {
             "query": {
@@ -430,20 +363,6 @@ class ESConnection:
                         "multi_match": {
                             "query": query,
                             "fields": list(text_fields),
-                        }
-                    },
-                    "script": {
-                        "source": """
-                            double titleScore = doc['title_embedding'].size() == 0
-                                ? 0.0
-                                : cosineSimilarity(params.query_vector, 'title_embedding');
-                            double snippetScore = doc['snippet_embedding'].size() == 0
-                                ? 0.0
-                                : cosineSimilarity(params.query_vector, 'snippet_embedding');
-                            return _score + 2.0 + (titleScore * 2.0) + snippetScore;
-                        """,
-                        "params": {
-                            "query_vector": query_vector
                         }
                     }
                 }

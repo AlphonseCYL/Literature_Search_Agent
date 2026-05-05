@@ -69,8 +69,7 @@ def _normalize_metadata_record(record: Dict[str, Any]) -> Literature_Metadata_Re
         link=record.get("link", ""),
         snippet=record.get("snippet", ""),
         cited_by=_extract_cited_by_total(record.get("cited_by")),
-        source=record.get("source", "hiagent"),
-        raw_payload=json.dumps(record, ensure_ascii=False),
+        source="Google Scholar"# 通过googlescholar搜索到的文献来源标记为为Google Scholar
     )
 
 ################################ 调用serpapi搜索Google Scholar ################################

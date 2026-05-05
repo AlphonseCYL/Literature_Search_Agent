@@ -5,7 +5,7 @@ from ElasticSearch import ESConnection, DEFAULT_ES_HOSTS, DEFAULT_ES_INDEX
 from db_utils import init_mysql_database, save_literature_metadata, DB_NAME, TABLE_NAME
 from search_platform.google_scholar import serpapi_google_scholar
 from utils import handle_query
-from Redis_utils import init_redis_info, save_literature_to_redis, get_literature_metadata_from_redis, REDIS_LIST
+from Redis_utils import init_redis_info, save_literature_to_redis, get_literature_metadata_from_redis, REDIS_LIST_NAME
 
 from schemas.redis_template import Save_To_Redis_Info
 from schemas.db_template import Save_Mysql_Info, Literature_Metadata_Record
@@ -87,8 +87,8 @@ def create_app() -> Flask:
     @app.route("/save_literature_metadata/", methods=["POST"])
     def save_literature_metadata_route():
         received_list = request.get_json(silent=True) or []
-        print(f"\n$$$$ SYSTEM CALL $$$$: FROM save_to_mysql:")
-        print(f"$$$$ SYSTEM CALL $$$$: successfully received {len(received_list)} literature metadata to save")
+        print(f"\n$$$$ ROUTER CALL $$$$: FROM save_to_mysql:")
+        print(f"$$$$ ROUTER CALL $$$$: successfully received {len(received_list)} literature metadata to save")
         print("正在存入MySQL数据库......")
 
         try:
@@ -113,13 +113,13 @@ def create_app() -> Flask:
     def save_to_redis_route():
         # 获取前端的返回数据，默认为空列表，以避免get_json返回None时导致后续代码出错
         received_list = request.get_json(silent=True) or []
-        print(f"\n$$$$ SYSTEM CALL $$$$: FROM SAVE_TO_REDIS:")
-        print(f"$$$$ SYSTEM CALL $$$$: successfully received request with payload:\n")
+        print(f"\n$$$$ ROUTER CALL $$$$: FROM SAVE_TO_REDIS:")
+        print(f"$$$$ ROUTER CALL $$$$: successfully received request with payload:\n")
         print(f"{len(received_list)} items received\n")
         print("Redis正在存入数据......")
 
         # 将每条文献信息存入Redis列表中，返回dict给前端展示存储结果
-        save_result: dict[str, Any] = save_literature_to_redis(REDIS_LIST, received_list)
+        save_result: dict[str, Any] = save_literature_to_redis(REDIS_LIST_NAME, received_list)
         return jsonify(save_result), 200
     
     ############################## 从redis读取 ################################
@@ -128,9 +128,9 @@ def create_app() -> Flask:
     @app.route("/get_from_redis/", methods=["GET"])
     def get_from_redis_route():
         # 从Redis列表中获取所有文献信息
-        literature_list = get_literature_metadata_from_redis(REDIS_LIST)
-        print(f"\n$$$$ SYSTEM CALL $$$$: FROM get_from_redis:")
-        print(f"$$$$ SYSTEM CALL $$$$: successfully retrieved literature metadata from Redis, count: {len(literature_list)}\n")
+        literature_list = get_literature_metadata_from_redis(REDIS_LIST_NAME)
+        print(f"\n$$$$ ROUTER CALL $$$$: FROM get_from_redis:")
+        print(f"$$$$ ROUTER CALL $$$$: successfully retrieved literature metadata from Redis, count: {len(literature_list)}\n")
         return jsonify({"literature_search_results": literature_list}), 200
 
 
@@ -139,13 +139,13 @@ def create_app() -> Flask:
     @app.route("/es_search/", methods=["POST"])
     def es_search_route():
         received_dict = request.get_json(silent=True) or {}
-        print(f"\n$$$$ SYSTEM CALL $$$$: FROM es_search:")
-        print(f"$$$$ SYSTEM CALL $$$$: successfully received request with payload:\n")
+        print(f"\n$$$$ ROUTER CALL $$$$: FROM es_search:")
+        print(f"$$$$ ROUTER CALL $$$$: successfully received request with payload:\n")
         print(f"{received_dict}\n")
 
         # 提取参数,hiagent端定义的参数
         query = received_dict.get("query")
-        literature_num = received_dict.get("literature_num", 1)# 默认为1条结果,hiagent端会传入需要的结果数量
+        literature_num = received_dict.get("literature_num", 3)# 默认为3条结果,hiagent端会传入需要的结果数量
 
         if not isinstance(query, str) or not query.strip():
             return jsonify(
@@ -159,16 +159,16 @@ def create_app() -> Flask:
             es_conn = ESConnection()
             es_conn.init_index(DEFAULT_ES_INDEX)
             # 调用Elasticsearch搜索函数，作为检索用户记忆
-            print(f"\n$$$$ SYSTEM CALL $$$$: FROM es_search:")
-            print(f"$$$$ SYSTEM CALL $$$$：执行混合检索......\n")
-            result = es_conn.hybrid_search(
-                query=query,
+            print(f"\n$$$$ ROUTER CALL $$$$: FROM es_search:")
+            print(f"$$$$ ROUTER CALL $$$$：正在执行query检索......\n")
+            result = es_conn.ES_query_search(
                 index_name=DEFAULT_ES_INDEX,
-                top_k=literature_num,
+                search_query=query,
+                size=literature_num,
             )
             # 将搜索结果pydantic结构数据转化为dict格式
             serialized_results = [item.model_dump() for item in result]
-            print(f"$$$$ SYSTEM CALL $$$$：混合检索结果已序列化，共 {len(serialized_results)} 条\n")
+            print(f"$$$$ ROUTER CALL $$$$：query检索结果已序列化，共 {len(serialized_results)} 条\n")
 
             return jsonify(
                 {

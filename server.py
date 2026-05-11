@@ -92,6 +92,8 @@ def create_app() -> Flask:
         print("正在存入MySQL数据库......")
 
         try:
+            # 确保MySQL数据库和表已经初始化，避免因数据库或表不存在而导致的存储失败
+            init_mysql_database()
             save_result = save_literature_metadata(received_list)
             print(f"save_result: \n{save_result}")
             return jsonify({"success": True, **save_result.model_dump()}), 200
@@ -156,6 +158,7 @@ def create_app() -> Flask:
             ), 400
 
         try:
+            # 初始化Elasticsearch连接并确保索引已创建
             es_conn = ESConnection()
             es_conn.init_index(DEFAULT_ES_INDEX)
             # 调用Elasticsearch搜索函数，作为检索用户记忆

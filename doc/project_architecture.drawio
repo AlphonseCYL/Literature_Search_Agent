@@ -1,0 +1,176 @@
+<mxfile host="65bd71144e">
+    <diagram id="paper-search-architecture" name="Paper Search Assistant Architecture">
+        <mxGraphModel dx="4097" dy="2153" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Paper Search Assistant Architecture" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1;fontColor=#17202A;" parent="1" vertex="1">
+                    <mxGeometry x="440" y="20" width="520" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="user" value="User / Frontend&#xa;HiAgent / RAG System" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#DAE8FC;strokeColor=#6C8EBF;fontSize=15;fontStyle=1;spacing=8;" parent="1" vertex="1">
+                    <mxGeometry x="590" y="80" width="220" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="flask" value="Flask API Service&#xa;server.py / main.py" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#D5E8D4;strokeColor=#82B366;fontSize=16;fontStyle=1;spacing=8;" parent="1" vertex="1">
+                    <mxGeometry x="560" y="190" width="280" height="78" as="geometry"/>
+                </mxCell>
+                <mxCell id="routesGroup" value="API Route Layer" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#F8F9FA;strokeColor=#BDBDBD;dashed=1;fontSize=14;fontStyle=1;verticalAlign=top;spacingTop=8;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="315" width="1200" height="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="searchRoute" value="/search_google_scholar/&#xa;Literature search" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=13;spacing=6;" parent="1" vertex="1">
+                    <mxGeometry x="130" y="365" width="180" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="redisSaveRoute" value="/save_to_redis/&#xa;Save temporary results" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=13;spacing=6;" parent="1" vertex="1">
+                    <mxGeometry x="340" y="365" width="180" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="redisReadRoute" value="/get_from_redis/&#xa;Read cached results" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=13;spacing=6;" parent="1" vertex="1">
+                    <mxGeometry x="550" y="365" width="180" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="mysqlRoute" value="/save_literature_metadata/&#xa;Persist metadata" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=13;spacing=6;" parent="1" vertex="1">
+                    <mxGeometry x="760" y="365" width="210" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="esRoute" value="/es_search/&#xa;Recall saved literature" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=13;spacing=6;" parent="1" vertex="1">
+                    <mxGeometry x="1010" y="365" width="180" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="queryClean" value="Query cleanup&#xa;utils/handle_query.py" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=13;spacing=6;" parent="1" vertex="1">
+                    <mxGeometry x="110" y="520" width="170" height="62" as="geometry"/>
+                </mxCell>
+                <mxCell id="serpapi" value="SerpAPI&#xa;Google Scholar Search" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#F5F5F5;strokeColor=#666666;fontSize=13;spacing=6;" parent="1" vertex="1">
+                    <mxGeometry x="310" y="520" width="180" height="62" as="geometry"/>
+                </mxCell>
+                <mxCell id="normalize" value="Result parsing&#xa;Field extraction&#xa;search_platform/google_scholar.py" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=13;spacing=6;" parent="1" vertex="1">
+                    <mxGeometry x="520" y="510" width="230" height="82" as="geometry"/>
+                </mxCell>
+                <mxCell id="schema" value="Pydantic Metadata Model&#xa;Literature_Metadata_Record&#xa;schemas/db_template.py" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#D5E8D4;strokeColor=#82B366;fontSize=13;fontStyle=1;spacing=6;" parent="1" vertex="1">
+                    <mxGeometry x="790" y="510" width="240" height="82" as="geometry"/>
+                </mxCell>
+                <mxCell id="redis" value="Redis&#xa;Short-term cache&#xa;JSON de-duplication&#xa;600s expiration&#xa;Redis_utils" style="shape=cylinder3d;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#F8CECC;strokeColor=#B85450;fontSize=13;spacing=8;" parent="1" vertex="1">
+                    <mxGeometry x="260" y="675" width="210" height="105" as="geometry"/>
+                </mxCell>
+                <mxCell id="mysql" value="MySQL&#xa;Long-term metadata store&#xa;Unique index on title + link&#xa;db_utils" style="shape=cylinder3d;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#DAE8FC;strokeColor=#6C8EBF;fontSize=13;spacing=8;" parent="1" vertex="1">
+                    <mxGeometry x="595" y="675" width="210" height="105" as="geometry"/>
+                </mxCell>
+                <mxCell id="esSync" value="MySQL to ES Sync&#xa;sync_literature_metadata_from_mysql" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=13;spacing=6;" parent="1" vertex="1">
+                    <mxGeometry x="865" y="692" width="230" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="elasticsearch" value="Elasticsearch&#xa;Literature index&#xa;Keyword recall&#xa;dense_vector reserved&#xa;ElasticSearch/ES_conn.py" style="shape=cylinder3d;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#FFE6CC;strokeColor=#D79B00;fontSize=13;spacing=8;" parent="1" vertex="1">
+                    <mxGeometry x="1140" y="675" width="220" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="cacheResult" value="Current search session&#xa;Results for frontend filtering" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#F8CECC;strokeColor=#B85450;fontSize=13;spacing=6;" parent="1" vertex="1">
+                    <mxGeometry x="260" y="820" width="210" height="58" as="geometry"/>
+                </mxCell>
+                <mxCell id="asset" value="Persistent literature assets&#xa;Reusable metadata base" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#DAE8FC;strokeColor=#6C8EBF;fontSize=13;spacing=6;" parent="1" vertex="1">
+                    <mxGeometry x="595" y="820" width="210" height="58" as="geometry"/>
+                </mxCell>
+                <mxCell id="recallResult" value="Standardized recall results&#xa;title / author / platform / year / link / snippet / cited_by" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;fontSize=13;spacing=6;" parent="1" vertex="1">
+                    <mxGeometry x="1125" y="820" width="250" height="66" as="geometry"/>
+                </mxCell>
+                <mxCell id="edgeUserFlask" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#6C8EBF;" parent="1" source="user" target="flask" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edgeFlaskSearch" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#82B366;" parent="1" source="flask" target="searchRoute" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edgeFlaskRedisSave" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#82B366;" parent="1" source="flask" target="redisSaveRoute" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edgeFlaskRedisRead" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#82B366;" parent="1" source="flask" target="redisReadRoute" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edgeFlaskMysql" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#82B366;" parent="1" source="flask" target="mysqlRoute" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edgeFlaskES" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#82B366;" parent="1" source="flask" target="esRoute" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edgeSearchQuery" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#9673A6;" parent="1" source="searchRoute" target="queryClean" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edgeQuerySerp" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#9673A6;" parent="1" source="queryClean" target="serpapi" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edgeSerpNormalize" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#9673A6;" parent="1" source="serpapi" target="normalize" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edgeNormalizeSchema" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#82B366;" parent="1" source="normalize" target="schema" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edgeRedisSaveSchema" value="validate then save" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#82B366;fontSize=12;" parent="1" source="redisSaveRoute" target="schema" edge="1">
+                    <mxGeometry x="0.2212" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="430" y="480"/>
+                            <mxPoint x="910" y="480"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edgeMysqlRouteSchema" value="validate then persist" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#82B366;fontSize=12;" parent="1" source="mysqlRoute" target="schema" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="910" y="450"/>
+                            <mxPoint x="910" y="450"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edgeSchemaRedis" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#B85450;" parent="1" source="schema" target="redis" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="910" y="630"/>
+                            <mxPoint x="365" y="630"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edgeSchemaMysql" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#6C8EBF;" parent="1" source="schema" target="mysql" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="910" y="630"/>
+                            <mxPoint x="700" y="630"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edgeRedisReadRedis" value="read cache" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#B85450;fontSize=12;" parent="1" source="redisReadRoute" target="redis" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="640" y="480"/>
+                            <mxPoint x="500" y="480"/>
+                            <mxPoint x="500" y="728"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edgeMysqlSync" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#6C8EBF;" parent="1" source="mysql" target="esSync" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edgeSyncES" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#D79B00;" parent="1" source="esSync" target="elasticsearch" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edgeESRouteES" value="search" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#D79B00;fontSize=12;" parent="1" source="esRoute" target="elasticsearch" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edgeRedisCache" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#B85450;" parent="1" source="redis" target="cacheResult" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edgeMysqlAsset" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#6C8EBF;" parent="1" source="mysql" target="asset" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edgeESRecall" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#D79B00;" parent="1" source="elasticsearch" target="recallResult" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edgeRecallUser" value="return recall results" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#D79B00;fontSize=12;" parent="1" source="recallResult" target="user" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1380" y="850"/>
+                            <mxPoint x="1380" y="115"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edgeCacheUser" value="return cached results" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#B85450;fontSize=12;" parent="1" source="cacheResult" target="user" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="30" y="850"/>
+                            <mxPoint x="30" y="115"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

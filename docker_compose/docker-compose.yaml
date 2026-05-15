@@ -1,0 +1,110 @@
+# version: '3.8'
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: redis_CYL
+    volumes:
+      - redis_cyl_data:/data
+      - "D:/Users/ALPHONSE/VSCodeProjects/compose_docker/redis.conf:/etc/redis/redis.conf"
+    command: ["redis-server", "/etc/redis/redis.conf"]
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    # 注意：如果只是单独启动，通常不需要指定 network，Docker 会自动创建默认 bridge。
+    # 只有当你的应用容器也在同一个自定义网络中时，才需要指定 network。
+
+
+  es:
+    container_name: es_CYL
+    image: elasticsearch:9.4.1
+    volumes:
+      - es_data_cyl:/usr/share/elasticsearch/data
+    ports:
+      - "9201:9200"
+    env_file: .env
+    environment:
+      - node.name=es_CYL
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - bootstrap.memory_lock=false
+      - discovery.type=single-node
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      - cluster.routing.allocation.disk.watermark.low=5gb
+      - cluster.routing.allocation.disk.watermark.high=3gb
+      - cluster.routing.allocation.disk.watermark.flood_stage=2gb
+      - TZ=${TIMEZONE}
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    mem_limit: ${MEM_LIMIT}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test: ["CMD-SHELL", "curl http://localhost:9200"]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+    restart: on-failure
+    networks:
+      - CYL_network
+  
+
+
+  kibana:
+    container_name: kibana_CYL
+    image: kibana:9.4.1
+    volumes:
+      - kibana_data_cyl:/usr/share/kibana/data
+    ports:
+      - "5601:5601"
+    env_file: .env
+    environment:
+      - ELASTICSEARCH_HOSTS=${ES_DOCKER_HOST}
+      - ELASTICSEARCH_USERNAME=${ELASTICSEARCH_USERNAME}
+      - ELASTICSEARCH_PASSWORD=${ELASTICSEARCH_PASSWORD}
+      - TZ=${TIMEZONE}
+    restart: on-failure
+    networks:
+      - CYL_network
+    depends_on:
+      - es
+  
+
+
+  logstash:
+    container_name: logstash_CYL
+    image: logstash:9.4.1
+    volumes:
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+      - logstash_data_cyl:/usr/share/logstash/data
+      - ./mysql-connector-j-9.7.0.jar:/usr/share/logstash/mysql-connector-j-9.7.0.jar
+    ports:
+      - "5044:5044"
+    env_file: .env
+    environment:
+      - ELASTICSEARCH_HOSTS=${ES_DOCKER_HOST}
+      - ELASTICSEARCH_USERNAME=${ELASTICSEARCH_USERNAME}
+      - ELASTICSEARCH_PASSWORD=${ELASTICSEARCH_PASSWORD}
+      - TZ=${TIMEZONE}
+    restart: on-failure
+    networks:
+      - CYL_network
+    depends_on:
+      - es
+
+
+
+volumes:
+  redis_cyl_data:
+    driver: local
+  es_data_cyl:
+    driver: local
+  kibana_data_cyl:
+    driver: local
+  logstash_data_cyl:
+    driver: local
+
+networks:
+  CYL_network:
+    driver: bridge

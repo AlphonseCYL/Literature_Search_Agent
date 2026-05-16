@@ -56,7 +56,7 @@ services:
       - "5601:5601"
     env_file: .env
     environment:
-      - ELASTICSEARCH_USERNAME="kibana" 
+      - ELASTICSEARCH_USERNAME="kibana" # 只改kibana.yml不行必须在environment里改
       - TZ=${TIMEZONE}
     restart: on-failure
     networks:

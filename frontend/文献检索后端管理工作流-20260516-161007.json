@@ -1,0 +1,633 @@
+{
+  "ID": "d7vi7u7gvkeofbkofkv0",
+  "CreateUserID": "d6pq6pig1kbd76np0pfg",
+  "UpdateUserID": "d6pq6pig1kbd76np0pfg",
+  "CreatedAt": "2026-05-09T12:09:29Z",
+  "UpdatedAt": "2026-05-16T08:08:48Z",
+  "DeletedAt": null,
+  "TenantID": "1000000000",
+  "WorkspaceID": "d6q2fdig1kbd76np1fd0",
+  "Type": "Workflow",
+  "Name": "文献检索后端管理工作流",
+  "Description": "当用户需要检索特定领域的文献时调用此工作流",
+  "Status": "Published",
+  "RuntimeStatus": "Succeed",
+  "RuntimeVersion": "",
+  "Icon": {
+    "Path": "upload/full/b2/a2/f74b2e0be8bda946d78199948ddef6615ee3cd8df5421a3e42ae8d33818e",
+    "ID": "d7vi7u7gvkeofbkofko0",
+    "Sha256": "b2a2f74b2e0be8bda946d78199948ddef6615ee3cd8df5421a3e42ae8d33818e",
+    "Size": 57408
+  },
+  "Hash": "0614c99390df91ae2450fda82226686a",
+  "LastHash": "0614c99390df91ae2450fda82226686a",
+  "Nodes": [
+    {
+      "ID": "d7vi7u7gvkeofbkofkog",
+      "CreateUserID": "d6pq6pig1kbd76np0pfg",
+      "UpdateUserID": "d6pq6pig1kbd76np0pfg",
+      "CreatedAt": "2026-05-09T12:09:29Z",
+      "UpdatedAt": "2026-05-15T08:55:57Z",
+      "DeletedAt": null,
+      "Code": "d7762ntg77ds2k2ads10",
+      "Type": "Start",
+      "Name": "Start",
+      "WorkflowID": "d7vi7u7gvkeofbkofkv0",
+      "Layout": {
+        "X": 441.8345042092,
+        "Y": -1298.0648830267
+      },
+      "StartConfig": {
+        "InputSchema": [
+          {
+            "Name": "query",
+            "Desc": "用户检索文献的query",
+            "Required": true,
+            "Type": 0
+          }
+        ],
+        "OutputSchema": [
+          {
+            "Name": "query",
+            "Desc": "用户检索文献的query",
+            "Required": true,
+            "Type": 0
+          }
+        ]
+      }
+    },
+    {
+      "ID": "d7vi7u7gvkeofbkofkp0",
+      "CreateUserID": "d6pq6pig1kbd76np0pfg",
+      "UpdateUserID": "d6pq6pig1kbd76np0pfg",
+      "CreatedAt": "2026-05-09T12:09:29Z",
+      "UpdatedAt": "2026-05-15T08:55:57Z",
+      "DeletedAt": null,
+      "Code": "d7762ntg77ds2k2ads1g",
+      "Type": "End",
+      "Name": "End",
+      "WorkflowID": "d7vi7u7gvkeofbkofkv0",
+      "Layout": {
+        "X": 1129.4653117697,
+        "Y": -445.1889188988
+      },
+      "Depends": [
+        {
+          "NodeCode": "d7gth9fgvkeofbknpkbg"
+        }
+      ],
+      "EndConfig": {
+        "InputVariables": [
+          {
+            "Type": "Reference",
+            "Name": "output_search",
+            "ValueFrom": {
+              "OutputRef": {
+                "NodeCode": "d7k2ne7gvkeofbknuhr0",
+                "OutputFieldPath": "从本地redis中取出待筛选文献.literature_search_results"
+              }
+            }
+          },
+          {
+            "Type": "Reference",
+            "Name": "output_mem",
+            "ValueFrom": {
+              "OutputRef": {
+                "NodeCode": "d7gth9fgvkeofbknpkbg",
+                "OutputFieldPath": "ES同步查询本地数据库.literature_metadata"
+              }
+            }
+          }
+        ],
+        "OutputType": "Variable",
+        "OutputSchema": [
+          {
+            "Name": "output",
+            "Type": -1
+          }
+        ],
+        "StreamOutput": true
+      }
+    },
+    {
+      "ID": "d7vi7u7gvkeofbkofkpg",
+      "CreateUserID": "d6pq6pig1kbd76np0pfg",
+      "UpdateUserID": "d6pq6pig1kbd76np0pfg",
+      "CreatedAt": "2026-05-09T12:09:29Z",
+      "UpdatedAt": "2026-05-15T08:55:57Z",
+      "DeletedAt": null,
+      "Code": "d776a2ngvkeofbkmsfvg",
+      "Type": "Code",
+      "Name": "GoogleScholar查询",
+      "WorkflowID": "d7vi7u7gvkeofbkofkv0",
+      "Layout": {
+        "X": 418.4958395528,
+        "Y": -444.6535986627
+      },
+      "Depends": [
+        {
+          "NodeCode": "d7b39jngvkeofbkn66lg"
+        }
+      ],
+      "CodeConfig": {
+        "InputVariables": [
+          {
+            "Type": "Reference",
+            "Name": "query_google_scholar",
+            "ValueFrom": {
+              "OutputRef": {
+                "NodeCode": "d7b39jngvkeofbkn66lg",
+                "OutputFieldPath": "GoogleScholar参数提取.query_google_scholar"
+              }
+            }
+          },
+          {
+            "Type": "Reference",
+            "Name": "as_ylo",
+            "ValueFrom": {
+              "OutputRef": {
+                "NodeCode": "d7b39jngvkeofbkn66lg",
+                "OutputFieldPath": "GoogleScholar参数提取.as_ylo"
+              }
+            }
+          },
+          {
+            "Type": "Reference",
+            "Name": "as_yhi",
+            "ValueFrom": {
+              "OutputRef": {
+                "NodeCode": "d7b39jngvkeofbkn66lg",
+                "OutputFieldPath": "GoogleScholar参数提取.as_yhi"
+              }
+            }
+          },
+          {
+            "Type": "Reference",
+            "Name": "lang_num",
+            "ValueFrom": {
+              "OutputRef": {
+                "NodeCode": "d7b39jngvkeofbkn66lg",
+                "OutputFieldPath": "GoogleScholar参数提取.lang_num"
+              }
+            }
+          },
+          {
+            "Type": "Reference",
+            "Name": "url",
+            "ValueFrom": {
+              "OutputRef": {
+                "NodeCode": "d7crjddg77ds2k2au1q0",
+                "OutputFieldPath": "获取本地后端url.url"
+              }
+            }
+          }
+        ],
+        "Language": 1,
+        "Code": "import requests\nimport json\nimport traceback\n\ndef handler(params):\n\n\n    # 除非你确定根路径 / 就能返回数据\n    target_api = f\"http://{params['url']}:5001/search_google_scholar\"\n\n    # 获取代码模块输入参数\n    query_google_scholar = params.get('query_google_scholar', {})\n    as_ylo = params.get(\"as_ylo\", \"\")\n    as_yhi = params.get(\"as_yhi\", \"\")\n    lang_num = params.get(\"lang_num\", {})\n    \n    # 预定义输出变量\n    status = {\n        \"status\": \"initializing\",\n        \"message\": \"\",\n    }\n\n\n    final_output = {\n        \"literature_search_results\":{}\n    }\n\n\n    try:\n\n        # 准备要发送给本地的 JSON 数据体\n        payload = {\n            \"query_google_scholar\": query_google_scholar,\n            \"as_ylo\": as_ylo,\n            \"as_yhi\": as_yhi,\n            \"lang_num\": lang_num,\n        }\n\n        # 1. 发送请求并得到服务器的回传数据\n        print(f\"正在 POST 请求: {target_api}\")\n        print(f\"发送数据: {payload}\")\n        response = requests.post(target_api, json=payload, timeout=120)\n        \n        # 2. 检查 HTTP 状态码\n        if response.status_code != 200:\n            status[\"status\"] = \"error\"\n            status[\"message\"] = f\"请求失败，状态码: {response.status_code}\"\n            status[\"raw_response\"] = response.text[:400] # 截取前400字符看看是不是HTML报错\n            return status\n        \n        # 尝试解析 JSON\n        try:\n            # 从服务器获取数据！！！！！！！！！！！！！！！！！！！！！！！！！\n            full_result = response.json()\n        except Exception as json_err:\n            status[\"status\"] = \"error\"\n            status[\"message\"] = \"返回内容不是合法的 JSON\"\n            status[\"raw_response\"] = response.text[:200]\n            return status\n        \n        # 将服务端返回的数据构造状态值\n        status[\"hello\"] = \"连接成功！\"\n        status[\"status\"] = \"success\"\n        status[\"message\"] = \"获取数据成功\"\n        \n\n        # 提取从服务器得到的数据!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n        # 假设返回的结构是 {\"literature_search_results\": [{...},{...},...]}\n        \n        literature_search_results = full_result.get(\"literature_search_results\", [])\n\n        # 5. 将服务端返回的数据构造返回值\n        final_output[\"literature_search_results\"] = literature_search_results\n        \n        \n    except Exception as e:\n        # 捕获网络错误或其他未知错误\n        status[\"status\"] = \"error\"\n        status[\"message\"] = str(e)\n        print(f\"发生异常: {traceback.format_exc()}\")\n        return status\n        \n    return final_output\n",
+        "OutputSchema": [
+          {
+            "Name": "literature_search_results",
+            "Type": 9
+          }
+        ]
+      }
+    },
+    {
+      "ID": "d7vi7u7gvkeofbkofkq0",
+      "CreateUserID": "d6pq6pig1kbd76np0pfg",
+      "UpdateUserID": "d6pq6pig1kbd76np0pfg",
+      "CreatedAt": "2026-05-09T12:09:29Z",
+      "UpdatedAt": "2026-05-15T08:55:57Z",
+      "DeletedAt": null,
+      "Code": "d77olangvkeofbkmt6kg",
+      "Type": "LLM",
+      "Name": "用户query规范化",
+      "WorkflowID": "d7vi7u7gvkeofbkofkv0",
+      "Layout": {
+        "X": 415.517418798,
+        "Y": -930.341955717
+      },
+      "Depends": [
+        {
+          "NodeCode": "d7crjddg77ds2k2au1q0"
+        }
+      ],
+      "LLMConfig": {
+        "ModelID": "d5iq3thd8brieipb4jd0",
+        "Temperature": 0.7,
+        "TopP": 0.5,
+        "MaxTokens": 256,
+        "EnableChatHistories": false,
+        "ReasoningMode": null,
+        "ReasoningSwitch": null,
+        "InputVariables": [
+          {
+            "Type": "Reference",
+            "Name": "query",
+            "ValueFrom": {
+              "OutputRef": {
+                "NodeCode": "d7762ntg77ds2k2ads10",
+                "OutputFieldPath": "Start.query"
+              }
+            }
+          }
+        ],
+        "Prompt": "帮我把用户的检索文献的问题{{query}}转换为标准的中文查询检索问题",
+        "PromptConfig": null,
+        "SystemPrompt": "# 角色(Role)\n    你是一名专业的学术检索专家，擅长将用户关于文献检索的查询语句转换为对应的中文检索问题。你具备深厚的学术知识和检索经验，能够准确理解用户需求并高效生成合适的检索问题，减少用户无意间的口水话和模糊的查询领域。\n\n    # 功能(Skills)\n    ## 功能1(Skill 1)：将用户的文献检索query转换为中文检索问题，输出为query_norm\n    - 仔细分析用户输入的关于文献检索的query。\n    - 根据学术检索的规则和要求，将query转换为准确的中文检索问题，保留关键信息、减少口语化，分析用户想查询的文献领域和内容和数量。\n\n    # 限制(Constraint)\n    - 仅生成中文的学术检索式。\n    - 检索式必须符合学术检索的规范和逻辑。\n\n    # 输出(Output)\n    - 以字符串格式输出到query_norm。\n    - 以清晰、准确的中文文本输出检索式。\n    - 检索式应包含所有必要的检索关键词词。\n\n    # 格式(Format)\n    - 字符串文本格式等。\n\n    # 检查(Check)\n    - 检查检索是否准确反映了用户的查询意图。\n    - 确保检索式符合学术检索的语法和规范。\n    - 确保输出了query_norm，不能为空。\n\n    # 要求(Claim)\n    - 输出语言为中文。\n    - 生成的检索式应简洁、有效，能够准确命中相关文献。",
+        "SystemPromptConfig": null,
+        "OutputFormat": "json",
+        "OutputSchema": [
+          {
+            "Name": "raw_output",
+            "Type": 0
+          },
+          {
+            "Name": "query_norm",
+            "Type": 0
+          }
+        ],
+        "ModelName": "Doubao-1-5-pro-32k",
+        "ModelFeatures": "[\"streaming\",\"tool-call\",\"stream-tool-call\"]",
+        "ModelParameters": "{\"context_tokens\":32768,\"features\":[\"streaming\",\"tool-call\",\"stream-tool-call\"],\"max_tokens\":{\"default\":4096,\"max\":12288,\"min\":1},\"price\":{\"completion\":\"0.0020\",\"currency\":\"RMB\",\"prompt\":\"0.0008\",\"unit\":\"0.001\"},\"react_prompt\":{\"enable_fewshots\":true,\"enable_inline_chat_histories\":true,\"name\":\"flatten_cn_doubao_160\"},\"reasoning\":{\"switch\":{\"default\":false}},\"strategies\":[\"react\",\"plan_and_execute\",\"function_call\"],\"temperature\":{\"default\":1,\"max\":1,\"min\":0},\"top_p\":{\"default\":0.7,\"max\":1,\"min\":0}}"
+      }
+    },
+    {
+      "ID": "d7vi7u7gvkeofbkofkqg",
+      "CreateUserID": "d6pq6pig1kbd76np0pfg",
+      "UpdateUserID": "d6pq6pig1kbd76np0pfg",
+      "CreatedAt": "2026-05-09T12:09:29Z",
+      "UpdatedAt": "2026-05-15T08:55:57Z",
+      "DeletedAt": null,
+      "Code": "d78t705g77ds2k2afp50",
+      "Type": "Code",
+      "Name": "将查询元数据存储到MySQL",
+      "WorkflowID": "d7vi7u7gvkeofbkofkv0",
+      "Layout": {
+        "X": 1138.0532505761,
+        "Y": -919.5399199968
+      },
+      "Depends": [
+        {
+          "NodeCode": "d7k2ne7gvkeofbknuhr0"
+        }
+      ],
+      "CodeConfig": {
+        "InputVariables": [
+          {
+            "Type": "Reference",
+            "Name": "literature_search_results",
+            "ValueFrom": {
+              "OutputRef": {
+                "NodeCode": "d7k2ne7gvkeofbknuhr0",
+                "OutputFieldPath": "从本地redis中取出待筛选文献.literature_search_results"
+              }
+            }
+          },
+          {
+            "Type": "Reference",
+            "Name": "url",
+            "ValueFrom": {
+              "OutputRef": {
+                "NodeCode": "d7crjddg77ds2k2au1q0",
+                "OutputFieldPath": "获取本地后端url.url"
+              }
+            }
+          }
+        ],
+        "Language": 1,
+        "Code": "import requests\nimport json\nimport traceback\n\ndef handler(params):\n    \n    # 预定义输出变量\n    final_output = {\n        \"status\": \"initializing\",\n        \"message\": \"\",\n        \"raw_response\": \"\"\n    }\n\n    try:\n        payload = params[\"literature_search_results\"]\n        target_api = f\"http://{params['url']}:5001/save_literature_metadata\"\n        response = requests.post(target_api, json=payload, timeout=120)\n        \n        # 检查 HTTP 状态码\n        if response.status_code != 200:\n            final_output[\"status\"] = \"error\"\n            final_output[\"message\"] = f\"请求失败，状态码: {response.status_code}\"\n            final_output[\"raw_response\"] = response.text[:600] # 截取前400字符看看是不是HTML报错\n            print(f\"发生异常: {traceback.format_exc()}\")\n\n            return final_output                         # 返回\n\n        \n        # 将服务端返回的数据构造状态值\n        final_output[\"status\"] = \"success\"\n        final_output[\"message\"] = f\"获取数据成功，状态码: {response.status_code}\"\n        # 处理dict格式的返回数据\n        final_output[\"raw_response\"] = response.text[:600] # 截取前400字符看看是不是HTML报错\n\n    except Exception as e:\n        # 捕获网络错误或其他未知错误\n        final_output[\"status\"] = \"error\"\n        final_output[\"message\"] = \"其他错误\"+str(e)\n        print(f\"发生异常: {traceback.format_exc()}\")\n\n        return final_output                              # 返回\n        \n    return final_output                                 # 返回\n\n",
+        "OutputSchema": [
+          {
+            "Name": "status",
+            "Type": 0
+          },
+          {
+            "Name": "message",
+            "Type": 0
+          },
+          {
+            "Name": "raw_response",
+            "Type": 0
+          }
+        ]
+      }
+    },
+    {
+      "ID": "d7vi7u7gvkeofbkofkr0",
+      "CreateUserID": "d6pq6pig1kbd76np0pfg",
+      "UpdateUserID": "d6pq6pig1kbd76np0pfg",
+      "CreatedAt": "2026-05-09T12:09:29Z",
+      "UpdatedAt": "2026-05-15T08:55:57Z",
+      "DeletedAt": null,
+      "Code": "d7b39jngvkeofbkn66lg",
+      "Type": "LLM",
+      "Name": "GoogleScholar参数提取",
+      "WorkflowID": "d7vi7u7gvkeofbkofkv0",
+      "Layout": {
+        "X": 426.4613755612,
+        "Y": -676.8015151451
+      },
+      "Depends": [
+        {
+          "NodeCode": "d77olangvkeofbkmt6kg"
+        }
+      ],
+      "LLMConfig": {
+        "ModelID": "d5iq3thd8brieipb4jd0",
+        "Temperature": 0.7,
+        "TopP": 0.5,
+        "MaxTokens": 256,
+        "EnableChatHistories": false,
+        "ReasoningMode": null,
+        "ReasoningSwitch": null,
+        "InputVariables": [
+          {
+            "Type": "Reference",
+            "Name": "query",
+            "ValueFrom": {
+              "OutputRef": {
+                "NodeCode": "d77olangvkeofbkmt6kg",
+                "OutputFieldPath": "用户query规范化.query_norm"
+              }
+            }
+          }
+        ],
+        "Prompt": "根据用户的查询语句{{query}}按照系统提示词要求输出结果",
+        "PromptConfig": null,
+        "SystemPrompt": "# 角色(Role)\n    你是一个搜索查询处理助手，擅长根据用户输入的查询内容生成适用于Google Scholar搜索的查询语句，提取限制词，分析文献语言和对应数量，具备细致、准确的特点，使用中文进行交流。\n\n    # 功能(Skills)\n    ## 功能1(Skill 1)：生成Google Scholar搜索查询语句\n    - 根据用户输入的{{query}}生成适用于Google Scholar搜索的query_google_scholar，对应语言的query应与lang_num一致，即若lang_num有en键则应该有en对应英语翻译。\n\n    ## 功能2(Skill 2)：提取限制词及年份参数\n    - 从用户输入中提取限制词，例如用户希望找“近5年”的论文，则输出as_ylo为\"2016\",输出as_yhi为\"2026\"（本年）。\n    - 识别用户希望结果包含的年份，输出as_ylo参数和as_yhi参数，表示希望的查询结果为[as_ylo,as_yhi]（包含这两年）之间年份的论文\n    - 若用户{{query}}没提到关于时间的限制，则不输出as_ylo、as_yhi参数\n\n\n    ## 功能3(Skill 3)：分析文献语言和数量\n    - 判断用户{{query}}需求的文献语言和对应数量，整理到lang_num字典中，若用户未提及数量则默认数量为10，若用户未提及某种语言则不添加对应语言的键值对到lang_num中。\n\n\n    # 限制(Constraint)\n    - 仅根据用户输入的{{query}}进行处理，不添加额外无关信息。\n\n    - 若用户未提及某些信息（如as_yhi参数、lang_num字典相关内容），则不输出相应结果。\n\n    # 输出(Output)\n    - 以字典形式输出，包含query_google_scholar、限制词列表（若有）、as_ylo参数（若有）、as_yhi参数（若有）、lang_num字典（若有）。\n    - 示例输出：\n    {\n        \"query_google_scholar\": {\"zh-CN\":\"中文搜索查询语句\",\"en\":\"search query translated in English\"},\n        \"as_ylo\": \"2018\",\n        \"as_yhi\": \"2022\",\n        \"lang_num\": {\"en\": 5, \"zh-CN\": 3},\n        \"限制词\": [\"词1\", \"词2\"]\n    }\n\n    # 格式(Format)\n    - 输出为标准的JSON格式。\n\n    # 检查(Check)\n    - 检查生成的query_google_scholar是否符合Google Scholar搜索的语法规则。\n    - 检查输出的年份参数是否为有效的整数。\n    - 检查lang_num字典中的语言代码是否为有效的Google Scholar支持的语言代码。\n\n    # 要求(Claim)\n    - 输出语言为中文。\n    - 严格按照JSON格式输出结果。\n    - 本年为2026年。",
+        "SystemPromptConfig": null,
+        "OutputFormat": "json",
+        "OutputSchema": [
+          {
+            "Name": "raw_output",
+            "Type": 0
+          },
+          {
+            "Name": "query_google_scholar",
+            "Type": 4,
+            "SubParameters": [
+              {
+                "Name": "en",
+                "Type": 0
+              },
+              {
+                "Name": "zh-CN",
+                "Type": 0
+              }
+            ]
+          },
+          {
+            "Name": "as_yhi",
+            "Type": 0
+          },
+          {
+            "Name": "as_ylo",
+            "Type": 0
+          },
+          {
+            "Name": "lang_num",
+            "Type": 4,
+            "SubParameters": [
+              {
+                "Name": "en",
+                "Type": 1
+              },
+              {
+                "Name": "zh-CN",
+                "Type": 1
+              }
+            ]
+          }
+        ],
+        "ModelName": "Doubao-1-5-pro-32k",
+        "ModelFeatures": "[\"streaming\",\"tool-call\",\"stream-tool-call\"]",
+        "ModelParameters": "{\"context_tokens\":32768,\"features\":[\"streaming\",\"tool-call\",\"stream-tool-call\"],\"max_tokens\":{\"default\":4096,\"max\":12288,\"min\":1},\"price\":{\"completion\":\"0.0020\",\"currency\":\"RMB\",\"prompt\":\"0.0008\",\"unit\":\"0.001\"},\"react_prompt\":{\"enable_fewshots\":true,\"enable_inline_chat_histories\":true,\"name\":\"flatten_cn_doubao_160\"},\"reasoning\":{\"switch\":{\"default\":false}},\"strategies\":[\"react\",\"plan_and_execute\",\"function_call\"],\"temperature\":{\"default\":1,\"max\":1,\"min\":0},\"top_p\":{\"default\":0.7,\"max\":1,\"min\":0}}"
+      }
+    },
+    {
+      "ID": "d7vi7u7gvkeofbkofks0",
+      "CreateUserID": "d6pq6pig1kbd76np0pfg",
+      "UpdateUserID": "d6pq6pig1kbd76np0pfg",
+      "CreatedAt": "2026-05-09T12:09:29Z",
+      "UpdatedAt": "2026-05-15T08:55:57Z",
+      "DeletedAt": null,
+      "Code": "d7crjddg77ds2k2au1q0",
+      "Type": "Code",
+      "Name": "获取本地后端url",
+      "WorkflowID": "d7vi7u7gvkeofbkofkv0",
+      "Layout": {
+        "X": 435.0727325436,
+        "Y": -1122.3850078777
+      },
+      "Depends": [
+        {
+          "NodeCode": "d7762ntg77ds2k2ads10"
+        }
+      ],
+      "CodeConfig": {
+        "InputVariables": [
+          {
+            "Type": "Input",
+            "Name": "url",
+            "StringValue": "10.68.80.73"
+          }
+        ],
+        "Language": 1,
+        "Code": "# 方法定义不能修改\ndef handler(params):\n    # 返回值是一个可序列化成 json 的 dict 或 object\n    ret = {\n        \"url\": params['url'],\n        }\n    return ret\n",
+        "OutputSchema": [
+          {
+            "Name": "url",
+            "Type": 0
+          }
+        ]
+      }
+    },
+    {
+      "ID": "d7vi7u7gvkeofbkofksg",
+      "CreateUserID": "d6pq6pig1kbd76np0pfg",
+      "UpdateUserID": "d6pq6pig1kbd76np0pfg",
+      "CreatedAt": "2026-05-09T12:09:29Z",
+      "UpdatedAt": "2026-05-15T08:55:57Z",
+      "DeletedAt": null,
+      "Code": "d7gth9fgvkeofbknpkbg",
+      "Type": "Code",
+      "Name": "ES同步查询本地数据库",
+      "WorkflowID": "d7vi7u7gvkeofbkofkv0",
+      "Layout": {
+        "X": 1122.1232827007,
+        "Y": -709.2874517189
+      },
+      "Depends": [
+        {
+          "NodeCode": "d78t705g77ds2k2afp50"
+        }
+      ],
+      "CodeConfig": {
+        "InputVariables": [
+          {
+            "Type": "Reference",
+            "Name": "query",
+            "ValueFrom": {
+              "OutputRef": {
+                "NodeCode": "d77olangvkeofbkmt6kg",
+                "OutputFieldPath": "用户query规范化.query_norm"
+              }
+            }
+          },
+          {
+            "Type": "Reference",
+            "Name": "url",
+            "ValueFrom": {
+              "OutputRef": {
+                "NodeCode": "d7crjddg77ds2k2au1q0",
+                "OutputFieldPath": "获取本地后端url.url"
+              }
+            }
+          },
+          {
+            "Type": "Input",
+            "Name": "literature_num",
+            "StringValue": "3"
+          }
+        ],
+        "Language": 1,
+        "Code": "import requests\nimport json\n\n# 方法定义不能修改\ndef handler(params):\n\n    # 返回值是一个可序列化成 json 的 dict 或 object\n    ret = {\n        \"status\": \"\",\n        \"message\": \"\",\n        \"raw_response\": \"\",\n        \"literaturn_metadata\": []\n    }\n\n    try:\n        target_api = f\"http://{params['url']}:5001/es_search\"\n        payload = params\n        response = requests.post(target_api, json=payload, timeout=120)\n\n        if response.status_code != 200:\n            ret[\"status\"] = \"error\"\n            ret[\"message\"] = f\"后端错误，状态码：{response.status_code}\"\n            ret[\"raw_response\"] = response.text[:600]\n\n            return ret\n        else: # status_code == 200成功\n            try:\n                response_norm = response.json()\n            except Exception as json_err:\n                ret[\"status\"] = \"error\"\n                ret[\"message\"] = f\"返回内容不是合法json\"\n                ret[\"raw_response\"] = response.text[:600]\n\n                return ret\n\n            ret[\"status\"] = \"success!!!\"\n            ret[\"message\"] = f\"获取数据成功，状态码：{response.status_code}\"\n            ret[\"literature_metadata\"] = response_norm.get(\"literature_metadata\",[])\n            ret[\"raw_response\"] = str(response_norm)\n\n    except Exception as e:\n        ret[\"status\"] = \"error\"\n        ret[\"message\"] = \"其他错误\"+str(e)\n        \n        return ret\n\n    return ret\n",
+        "OutputSchema": [
+          {
+            "Name": "status",
+            "Type": 0
+          },
+          {
+            "Name": "message",
+            "Type": 0
+          },
+          {
+            "Name": "raw_response",
+            "Type": 0
+          },
+          {
+            "Name": "literature_metadata",
+            "Type": 9
+          }
+        ]
+      }
+    },
+    {
+      "ID": "d7vi7u7gvkeofbkofktg",
+      "CreateUserID": "d6pq6pig1kbd76np0pfg",
+      "UpdateUserID": "d6pq6pig1kbd76np0pfg",
+      "CreatedAt": "2026-05-09T12:09:29Z",
+      "UpdatedAt": "2026-05-15T08:55:57Z",
+      "DeletedAt": null,
+      "Code": "d7j2ltngvkeofbkntno0",
+      "Type": "Code",
+      "Name": "redis缓存防重",
+      "WorkflowID": "d7vi7u7gvkeofbkofkv0",
+      "Layout": {
+        "X": 1123.1218221282,
+        "Y": -1305.3621050935
+      },
+      "Depends": [
+        {
+          "NodeCode": "d776a2ngvkeofbkmsfvg"
+        }
+      ],
+      "CodeConfig": {
+        "InputVariables": [
+          {
+            "Type": "Reference",
+            "Name": "literature_search_results",
+            "ValueFrom": {
+              "OutputRef": {
+                "NodeCode": "d776a2ngvkeofbkmsfvg",
+                "OutputFieldPath": "GoogleScholar查询.literature_search_results"
+              }
+            }
+          },
+          {
+            "Type": "Reference",
+            "Name": "url",
+            "ValueFrom": {
+              "OutputRef": {
+                "NodeCode": "d7crjddg77ds2k2au1q0",
+                "OutputFieldPath": "获取本地后端url.url"
+              }
+            }
+          }
+        ],
+        "Language": 1,
+        "Code": "import requests\nimport json\nimport traceback\n\ndef handler(params):\n    \n    # 预定义输出变量\n    final_output = {\n        \"status\": \"initializing\",\n        \"message\": \"\",\n        \"raw_response\": \"\"\n    }\n\n    try:\n        target_api = f\"http://{params['url']}:5001/save_to_redis\"\n        # 准备要发送给本地的 JSON 数据体\n        # 将查询到的论文元数据发送回本地\n        payload = params.get(\"literature_search_results\",[])\n        # 发送请求 并 得到服务器的回传数据!!!!!!!!!!!!!!!!!!!!!!\n        print(f\"正在 POST 请求: {target_api}\")\n        print(f\"发送数据: {payload}\")\n        response = requests.post(target_api, json=payload, timeout=120)\n        \n        # 检查 HTTP 状态码\n        if response.status_code != 200:\n            final_output[\"status\"] = \"error\"\n            final_output[\"message\"] = f\"请求失败，状态码: {response.status_code}\"\n            final_output[\"raw_response\"] = response.text[:600] # 截取前400字符看看是不是HTML报错\n            print(f\"发生异常: {traceback.format_exc()}\")\n\n            return final_output                         # 返回\n\n        \n        # 将服务端返回的数据构造状态值\n        final_output[\"status\"] = \"success\"\n        final_output[\"message\"] = f\"本地执行成功，状态码: {response.status_code}\"\n        # 处理dict格式的返回数据\n        final_output[\"raw_response\"] = response.text[:600] # 截取前400字符看看是不是HTML报错\n\n    except Exception as e:\n        # 捕获网络错误或其他未知错误\n        final_output[\"status\"] = \"error\"\n        final_output[\"message\"] = \"其他错误\"+str(e)\n        print(f\"发生异常: {traceback.format_exc()}\")\n\n        return final_output                              # 返回\n        \n    return final_output    ",
+        "OutputSchema": [
+          {
+            "Name": "status",
+            "Type": 0
+          },
+          {
+            "Name": "message",
+            "Type": 0
+          },
+          {
+            "Name": "raw_response",
+            "Type": 0
+          }
+        ]
+      }
+    },
+    {
+      "ID": "d7vi7u7gvkeofbkofkug",
+      "CreateUserID": "d6pq6pig1kbd76np0pfg",
+      "UpdateUserID": "d6pq6pig1kbd76np0pfg",
+      "CreatedAt": "2026-05-09T12:09:29Z",
+      "UpdatedAt": "2026-05-15T08:55:57Z",
+      "DeletedAt": null,
+      "Code": "d7k2ne7gvkeofbknuhr0",
+      "Type": "Code",
+      "Name": "从本地redis中取出待筛选文献",
+      "WorkflowID": "d7vi7u7gvkeofbkofkv0",
+      "Layout": {
+        "X": 1133.569176374,
+        "Y": -1104.4861846316
+      },
+      "Depends": [
+        {
+          "NodeCode": "d7j2ltngvkeofbkntno0"
+        }
+      ],
+      "CodeConfig": {
+        "InputVariables": [
+          {
+            "Type": "Reference",
+            "Name": "url",
+            "ValueFrom": {
+              "OutputRef": {
+                "NodeCode": "d7crjddg77ds2k2au1q0",
+                "OutputFieldPath": "获取本地后端url.url"
+              }
+            }
+          }
+        ],
+        "Language": 1,
+        "Code": "import requests\nimport traceback\n\n\n# 方法定义不能修改\ndef handler(params):\n\n    final_output = {\n        \"status\":\"initializing\",\n        \"message\":\"\",\n        \"raw_response\":\"\",\n        \"literature_search_results\":[]\n    }\n\n    try:\n        target_api = f\"http://{params['url']}:5001/get_from_redis\"\n        response = requests.get(target_api, timeout=120)\n        \n        # 检查 HTTP 状态码\n        if response.status_code != 200:\n            final_output[\"status\"] = \"error\"\n            final_output[\"message\"] = f\"请求失败，状态码: {response.status_code}\"\n            final_output[\"raw_response\"] = response.text[:600] # 截取前400字符看看是不是HTML报错\n            print(f\"发生异常: {traceback.format_exc()}\")\n\n            return final_output                         # 返回\n\n        \n        # 将服务端返回的数据构造状态值\n        final_output[\"status\"] = \"success\"\n        final_output[\"message\"] = f\"本地执行成功，状态码: {response.status_code}\"\n        # 处理dict格式的返回数据\n        final_output[\"raw_response\"] = response.text[:600] # 截取前400字符看看是不是HTML报错\n        final_output[\"literature_search_results\"] = response.json()[\"literature_search_results\"]\n\n    except Exception as e:\n        # 捕获网络错误或其他未知错误\n        final_output[\"status\"] = \"error\"\n        final_output[\"message\"] = \"其他错误\"+str(e)\n        print(f\"发生异常: {traceback.format_exc()}\")\n\n        return final_output     \n\n    return final_output\n",
+        "OutputSchema": [
+          {
+            "Name": "literature_search_results",
+            "Type": 9
+          },
+          {
+            "Name": "status",
+            "Type": 0
+          },
+          {
+            "Name": "message",
+            "Type": 0
+          },
+          {
+            "Name": "raw_response",
+            "Type": 0
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -6,6 +6,7 @@ from db_utils import init_mysql_database, save_literature_metadata, DB_NAME, TAB
 from search_platform.google_scholar import serpapi_google_scholar
 from utils import handle_query
 from Redis_utils import init_redis_info, save_literature_to_redis, get_literature_metadata_from_redis, REDIS_LIST_NAME
+from llm import filter_literature_records, QwenFilterError
 
 from schemas.redis_template import Save_To_Redis_Info
 from schemas.db_template import Save_Mysql_Info, Literature_Metadata_Record
@@ -123,17 +124,62 @@ def create_app() -> Flask:
         # 将每条文献信息存入Redis列表中，返回dict给前端展示存储结果
         save_result: dict[str, Any] = save_literature_to_redis(REDIS_LIST_NAME, received_list)
         return jsonify(save_result), 200
-    
-    ############################## 从redis读取 ################################
-    #   前端输入：无
+
+
+    ############################## 从redis筛选并读取 ################################
+    #   前端输入：query
     #   后端返回：{"literature_search_results": List[dict]}JSON格式
-    @app.route("/get_from_redis/", methods=["GET"])
+    @app.route("/get_from_redis/", methods=["POST"])
     def get_from_redis_route():
         # 从Redis列表中获取所有文献信息
         literature_list = get_literature_metadata_from_redis(REDIS_LIST_NAME)
         print(f"\n$$$$ ROUTER CALL $$$$: FROM get_from_redis:")
         print(f"$$$$ ROUTER CALL $$$$: successfully retrieved literature metadata from Redis, count: {len(literature_list)}\n")
-        return jsonify({"literature_search_results": literature_list}), 200
+
+        # 获取前端回传参数
+        received_dict = request.get_json(silent=True) or {}
+        query = received_dict.get("query")
+        if not isinstance(query, str) or not query.strip():
+            return jsonify(
+                {
+                    "success": False,
+                    "message": "field 'query' is required and must be a non-empty string",
+                }
+            ), 400
+        model = received_dict.get("model")
+        max_selected = received_dict.get("max_selected")
+        
+        # 进行文献筛选，并返回给前端，中间遇到任何问题都会返回给前端报错
+        try:
+            literature_filtered_schemas_list = filter_literature_records(
+                literature_list,
+                query=query,
+                model=model if isinstance(model, str) and model.strip() else None,
+                max_selected=max_selected if isinstance(max_selected, int) else None,
+            )
+            literature_filtered_list = [record.model_dump() for record in literature_filtered_schemas_list]
+            return jsonify(
+                {
+                    "success": True,
+                    "redis_count": len(literature_list),
+                    "literature_search_results": literature_list,
+                    "filtered_count": len(literature_filtered_list),
+                    "literature_filtered_results": literature_filtered_list,
+                }
+            ), 200
+        except QwenFilterError as exc:
+            return jsonify({"success": False, "message": str(exc)}), 502
+        except ValueError as exc:
+            return jsonify({"success": False, "message": str(exc)}), 400
+        except ConnectionError as exc:
+            return jsonify({"success": False, "message": str(exc)}), 503
+        except Exception as exc:
+            return jsonify(
+                {
+                    "success": False,
+                    "message": f"failed to filter redis literature with qwen: {exc}",
+                }
+            ), 500
 
 
 

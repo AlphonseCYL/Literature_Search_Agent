@@ -19,7 +19,7 @@ def _normalize_metadata_record(record: Dict[str, Any], index: int) -> Literature
 
 
 ########################### 存储文献元数据到MySQL数据库的函数同步双写到ES #########################
-def save_literature_metadata(payload: List[Literature_Metadata_Record]) -> Save_Mysql_Info:
+def save_literature_metadata(payload: List[Any]) -> Save_Mysql_Info:
     # payload是一个包含文献记录的列表
     if isinstance(payload, list):
         records = payload
@@ -34,7 +34,9 @@ def save_literature_metadata(payload: List[Literature_Metadata_Record]) -> Save_
 
     normalized_records: List[Literature_Metadata_Record] = []
     for index, record in enumerate(records, start=1):
-        if isinstance(record, dict):
+        if isinstance(record, Literature_Metadata_Record):
+            normalized_records.append(record)
+        elif isinstance(record, dict):
             normalized_records.append(_normalize_metadata_record(record, index))
 
     if not normalized_records:

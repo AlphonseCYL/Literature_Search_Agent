@@ -1,1 +1,17 @@
 .env
+# 虚拟环境
+.venv/
+venv/
+ENV/
+# Python 缓存与编译文件
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+# 临时文件与日志
+*.log
+*.json
+*.txt
+# 操作系统生成的文件
+.DS_Store
+Thumbs.db

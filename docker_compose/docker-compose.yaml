@@ -19,6 +19,7 @@ services:
     image: elasticsearch:9.4.1
     volumes:
       - es_data_cyl:/usr/share/elasticsearch/data
+      - es_plugins:/usr/share/elasticsearch/plugins
     ports:
       - "9200:9200"
     env_file: .env
@@ -93,6 +94,8 @@ volumes:
   redis_cyl_data:
     driver: local
   es_data_cyl:
+    driver: local
+  es_plugins:
     driver: local
   kibana_data_cyl:
     driver: local

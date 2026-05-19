@@ -31,7 +31,7 @@ def filter_literature_records(
     query: str,
     model: str | None = None,
     max_selected: int | None = None,
-) -> list[Literature_Metadata_Record]:
+) -> tuple[list[Literature_Metadata_Record], list[dict]]:
     """Filter Redis literature records with Qwen according to a natural query.
 
     The returned records keep the original ``Literature_Metadata_Record`` shape.
@@ -42,7 +42,7 @@ def filter_literature_records(
     normalized_records = _normalize_records(literature_records)
     cleaned_query = _normalize_query(query)
     if not normalized_records:
-        return []
+        return ([], [])
 
     selected_limit = _normalize_max_selected(max_selected, cleaned_query)
     # 构造prompt
@@ -60,7 +60,9 @@ def filter_literature_records(
     if selected_limit is not None:
         selected_indices = selected_indices[:selected_limit]
 
-    return [normalized_records[index] for index in selected_indices]
+    selected_records = [normalized_records[index] for index in selected_indices]
+    selected_reasons = json.loads(content)["selected"]
+    return (selected_records, selected_reasons)
 
 
 def _normalize_records(records: Sequence[Any]) -> list[Literature_Metadata_Record]:

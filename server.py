@@ -151,7 +151,7 @@ def create_app() -> Flask:
         
         # 进行文献筛选，并返回给前端，中间遇到任何问题都会返回给前端报错
         try:
-            literature_filtered_schemas_list = filter_literature_records(
+            literature_filtered_schemas_list, selected_reasons = filter_literature_records(
                 literature_list,
                 query=query,
                 model=model if isinstance(model, str) and model.strip() else None,
@@ -165,6 +165,7 @@ def create_app() -> Flask:
                     "literature_search_results": literature_list,
                     "filtered_count": len(literature_filtered_list),
                     "literature_filtered_results": literature_filtered_list,
+                    "reasons_list": selected_reasons
                 }
             ), 200
         except QwenFilterError as exc:

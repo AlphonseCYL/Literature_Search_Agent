@@ -379,13 +379,13 @@ MySQL 数据库和表会在 Flask 应用启动时自动创建。Elasticsearch in
 ### 5. 启动后端服务
 
 ```bash
-python main.py --host 0.0.0.0 --port 5001
+python main.py --host 0.0.0.0 --port 8000
 ```
 
 启动成功后访问：
 
 ```text
-http://127.0.0.1:5001/
+http://127.0.0.1:8000/
 ```
 
 ## 典型使用流程

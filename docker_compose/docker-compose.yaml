@@ -2,9 +2,9 @@
 services:
   redis:
     image: redis:7-alpine
-    container_name: redis_CYL
+    container_name: redis_LSA
     volumes:
-      - redis_cyl_data:/data
+      - redis_lsa_data:/data
       - "D:/Users/ALPHONSE/VSCodeProjects/compose_docker/redis.conf:/etc/redis/redis.conf"
     command: ["redis-server", "/etc/redis/redis.conf"]
     ports:
@@ -13,27 +13,41 @@ services:
     # 注意：如果只是单独启动，通常不需要指定 network，Docker 会自动创建默认 bridge。
     # 只有当你的应用容器也在同一个自定义网络中时，才需要指定 network。
 
-
+  mysql:
+    container_name: mysql_LSA
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD:-0000}
+      MYSQL_DATABASE: ${MYSQL_DATABASE_NAME:-RAG_system}
+      TZ: ${TIMEZONE:-Asia/Shanghai}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+    networks:
+      - LSA_network
+  
   es:
-    container_name: es_CYL
+    container_name: es_LSA
     image: elasticsearch:9.4.1
     volumes:
-      - es_data_cyl:/usr/share/elasticsearch/data
+      - es_lsa_data:/usr/share/elasticsearch/data
       - es_plugins:/usr/share/elasticsearch/plugins
+      - ./elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
     ports:
       - "9200:9200"
     env_file: .env
     environment:
-      - node.name=es_CYL
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
-      - bootstrap.memory_lock=false
-      - discovery.type=single-node
-      - xpack.security.enabled=true
-      - xpack.security.http.ssl.enabled=false
-      - xpack.security.transport.ssl.enabled=false
-      - cluster.routing.allocation.disk.watermark.low=5gb
-      - cluster.routing.allocation.disk.watermark.high=3gb
-      - cluster.routing.allocation.disk.watermark.flood_stage=2gb
       - TZ=${TIMEZONE}
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     mem_limit: ${MEM_LIMIT}
@@ -43,65 +57,66 @@ services:
         hard: -1
     restart: on-failure
     networks:
-      - CYL_network
+      - LSA_network
   
 
 
   kibana:
-    container_name: kibana_CYL
+    container_name: kibana_LSA
     image: kibana:9.4.1
     volumes:
-      - kibana_data_cyl:/usr/share/kibana/data
+      - kibana_lsa_data:/usr/share/kibana/data
       - ./kibana.yml:/usr/share/kibana/config/kibana.yml
     ports:
       - "5601:5601"
     env_file: .env
     environment:
-      - ELASTICSEARCH_USERNAME="kibana" # 只改kibana.yml不行必须在environment里改
       - TZ=${TIMEZONE}
     restart: on-failure
     networks:
-      - CYL_network
+      - LSA_network
     depends_on:
       - es
   
 
 
   logstash:
-    container_name: logstash_CYL
+    container_name: logstash_LSA
     image: logstash:9.4.1
     volumes:
       - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf #:ro  read-only
-      - logstash_data_cyl:/usr/share/logstash/data
+      - logstash_lsa_data:/usr/share/logstash/data
       - ./mysql-connector-j-9.7.0.jar:/usr/share/logstash/mysql-connector-j-9.7.0.jar
     ports:
-      - "5044:5044"
+      - "5040:5044"
     env_file: .env
     environment:
       - ELASTICSEARCH_HOSTS=${ES_DOCKER_HOST}
-      - ELASTICSEARCH_USERNAME=${ELASTICSEARCH_USERNAME}
-      - ELASTICSEARCH_PASSWORD=${ELASTICSEARCH_PASSWORD}
+      - LOGSTASH_ELASTICSEARCH_USERNAME=${LOGSTASH_ELASTICSEARCH_USERNAME}
+      - LOGSTASH_ELASTICSEARCH_PASSWORD=${LOGSTASH_ELASTICSEARCH_PASSWORD}
       - TZ=${TIMEZONE}
     restart: on-failure
     networks:
-      - CYL_network
+      - LSA_network
     depends_on:
       - es
 
 
 
 volumes:
-  redis_cyl_data:
+  mysql_data:
     driver: local
-  es_data_cyl:
+  redis_lsa_data:
+    driver: local
+  es_lsa_data:
     driver: local
   es_plugins:
     driver: local
-  kibana_data_cyl:
+  kibana_lsa_data:
     driver: local
-  logstash_data_cyl:
+  logstash_lsa_data:
     driver: local
 
 networks:
-  CYL_network:
+  LSA_network:
     driver: bridge

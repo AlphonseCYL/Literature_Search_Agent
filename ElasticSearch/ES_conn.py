@@ -75,7 +75,15 @@ class ESConnection:
         if not self.es.indices.exists(index=index_name):
             mapping = {
                 "properties": {
-                    "title": {"type": "keyword"},
+                    "title": {
+                        "type": "text",
+                        "fields": {
+                            "keyword": {
+                                "type":"keyword",
+                                "ignore_above" : 256
+                            }
+                        }
+                        },
                     "title_embedding": {
                         "type": "dense_vector",
                         "dims": EMBEDDING_DIMS,
@@ -224,122 +232,8 @@ class ESConnection:
         except Exception as e:
             print(f"Error from ESConnection.ES_query_search: {e}")
             return []
-
-    # 同步MySQL数据库中的文献元数据到Elasticsearch索引中，供搜索使用
-    def sync_literature_metadata_from_mysql(
-            self,
-            index_name: str, 
-            db_name: str = DB_NAME, 
-            table_name: str = TABLE_NAME
-            ) -> dict[str, Any]:
-
-        mysql_conn = get_mysql_server_connection()
-        # 从MySQL数据库中查询所有文献元数据记录
-        try:
-            self.init_index(index_name)
-            cmd = f"SELECT {', '.join(LITERATURE_METADATA_FIELDS)} FROM `{table_name}`"
-            mysql_conn.select_db(db_name)
-            with mysql_conn.cursor() as cursor:
-                cursor.execute(cmd)
-                records = cursor.fetchall()
-                print(f"\nFROM ESConnection sync_literature_metadata_from_mysql:")
-                print(f"正在从MySQL数据库'{db_name}'的表'{table_name}'中获取所有待同步数据，请稍候......")
-                print(f"Successfully fetched {len(records)} records from MySQL database '{db_name}', table '{table_name}'")
-                print(f"record 第一个记录为：\n{records[0]}")
-        except Exception as exc:
-            return {
-                "success": False,
-                "message": f"Failed to fetch records from MySQL: {exc}",
-            }
-        finally:
-            mysql_conn.close()
-
-        # 如果没有记录需要同步，直接返回成功响应
-        if not records:
-            return {
-                "success": True,
-                "synced_count": 0,
-                "failed_count": 0,
-                "errors": [],
-                "message": f"No literature metadata records found in MySQL table '{db_name}.{table_name}'",
-            }
-
-        # 成功获取到记录后，读取Elasticsearch索引的mapping，确定哪些字段是可写的（即非semantic_text类型），并构建批量插入操作
-        try:
-            mapping_response = self.es.indices.get_mapping(index=index_name)
-            index_mapping = mapping_response[index_name]["mappings"].get("properties", {})
-            writable_fields = set(index_mapping)
-        except Exception as exc:
-            return {
-                "success": False,
-                "message": f"Failed to read Elasticsearch mapping for index '{index_name}': {exc}",
-            }
-
-        # 构建批量插入操作列表ES_operations
-        ES_operations: list[dict[str, Any]] = []
-        for record in records:
-            # 将MySQL查询结果中的每条记录转换为字典格式（字段名: 字段值）
-            record_dict = dict(zip(LITERATURE_METADATA_FIELDS, record))
-            doc_id = str(record_dict.pop("id"))
-            # 构建要插入Elasticsearch的文档，字段名和值都必须符合Elasticsearch索引的mapping定义，且只能包含可写字段
-            document = {
-                field_name: record_dict.get(field_name)
-                for field_name in LITERATURE_METADATA_FIELDS
-                if field_name != "id" and field_name in writable_fields
-            }
-            # 对于year和cited_by字段，确保它们的类型与Elasticsearch索引的mapping定义一致‘
-            # （year作为字符串，cited_by作为整数）
-            if "year" in document and document["year"] is not None:
-                document["year"] = str(document["year"])
-            if "cited_by" in document and document["cited_by"] is not None:
-                document["cited_by"] = int(document["cited_by"])
-            ES_operations.append({"index": {"_index": index_name, "_id": doc_id}})
-            ES_operations.append(document)
-        print(f"\nFROM ESConnection sync_literature_metadata_from_mysql:")
-        print(f"成功构建批量插入操作列表")
-        print(f"操作列表前两条为：\n{ES_operations[:4]}\n")# 每条记录对应两条操作命令（index和文档数据），因此显示前4条操作命令
-
-        # 执行批量插入操作，并统计成功和失败的记录数量，以及失败的错误信息
-        errors: list[str] = []
-        batch_size = 500
-        synced_count = 0
-
-        for start in range(0, len(ES_operations), batch_size * 2):# 每2行操作命令为一次有效操作，因此 * 2
-            batch_operations = ES_operations[start:start + batch_size * 2]
-            for attempt in range(3):
-                try:
-                    bulk_result = self.es.bulk(operations=batch_operations, timeout="300s", refresh=True)
-                    for item in bulk_result.get("items", []):# 获取每一条操作的结果，len(items)就是批量操作的数量
-                        index_result = item.get("index", {}) # ????????????????????????没有这个字段
-                        # 根据Elasticsearch的bulk API响应格式，检查每条操作的结果状态码，统计成功和失败的记录数量，并收集失败的错误信息
-                        status = int(index_result.get("status", 0))
-                        if 200 <= status < 300:
-                            synced_count += 1
-                        else:
-                            errors.append(f"{index_result.get('_id')}: {index_result.get('error', index_result)}")
-                    break
-                except Exception as exc:
-                    if attempt < 2 and re.search(r"(Timeout|time out)", str(exc), re.IGNORECASE):
-                        time.sleep(3)
-                        continue
-                    errors.append(str(exc))
-                    break
-
-        failed_count = len(errors)
-        return {
-            "success": failed_count == 0,
-            "synced_count": synced_count,
-            "failed_count": failed_count,
-            "errors": errors,
-            "message": (
-                f"Successfully synchronized {synced_count} literature metadata records "
-                f"from MySQL to Elasticsearch index '{index_name}'"
-                if failed_count == 0
-                else f"Synchronized {synced_count} records with {failed_count} failures"
-            ),
-        }
-
     
+
     # Elasticsearch搜索函数，支持基于文本查询和向量查询的混合搜索
     def hybrid_search(
         self,

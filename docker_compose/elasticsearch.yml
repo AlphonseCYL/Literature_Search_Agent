@@ -1,0 +1,18 @@
+cluster.name: "docker-cluster-lsa"
+network.host: 0.0.0.0
+node.name: "es_LSA"
+
+bootstrap.memory_lock: false
+discovery.type: single-node
+
+xpack.security.enabled: true    # 开关xpack
+
+# 本地单机开发，最省事的修法是把这两项都关掉
+xpack.security.http.ssl.enabled: false
+xpack.security.transport.ssl.enabled: false
+# xpack.security.transport.ssl 被开启了，但没有给它配证书和私钥会报错
+xpack.license.self_generated.type: basic
+
+cluster.routing.allocation.disk.watermark.low: 5gb
+cluster.routing.allocation.disk.watermark.high: 3gb
+cluster.routing.allocation.disk.watermark.flood_stage: 2gb

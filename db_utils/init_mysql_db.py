@@ -1,5 +1,4 @@
 import os
-import re
 from typing import Any, Dict
 
 import pymysql
@@ -29,6 +28,12 @@ MYSQL_SERVER_CONFIG: Dict[str, Any] = {
 
 def get_mysql_server_connection() -> pymysql.connections.Connection:
     return pymysql.connect(**MYSQL_SERVER_CONFIG) # 字典解包
+
+
+def get_mysql_admin_connection() -> pymysql.connections.Connection:
+    admin_config = dict(MYSQL_SERVER_CONFIG)
+    admin_config.pop("database", None)
+    return pymysql.connect(**admin_config)
 
 
 ############### 初始化MySQL数据库和表的函数 ###############
@@ -62,7 +67,7 @@ def init_mysql_database() -> None:
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     """
 
-    connection = get_mysql_server_connection()
+    connection = get_mysql_admin_connection()
     try:
         with connection.cursor() as cursor:
             cursor.execute(create_database_sql)
